@@ -5,7 +5,6 @@
 #include <math.h>
 #include <string.h>
 #include <unistd.h>
-#include <omp.h>
 #include "blockbuster_grid.h"
 #include <getopt.h>
 
@@ -22,11 +21,12 @@ int main(int argc, char *argv[])
     int n_sample = -1; // n_sample must be specified
     double upper_bound = 1.0;
     double lower_bound = 1e-4;
-    int grid_size;
+    int grid_size = 35;
     int num_threads = 1; // Set default to the number of available CPU cores!
+    int scale = 1;
     char *outputfile = "grid.txt";
     int opt;
-    while ((opt = getopt(argc, argv, "n:u:o:l:")) != -1)
+    while ((opt = getopt(argc, argv, "n:u:o:l:g:s:")) != -1)
     {
         switch (opt)
         {
@@ -42,6 +42,12 @@ int main(int argc, char *argv[])
          case 'l':
             lower_bound = atof(optarg); // Set the number of threads
             break;
+        case 'g':
+            grid_size = atoi(optarg); // Set the number of threads
+            break;
+        case 's':
+            scale = atoi(optarg); // Set the number of threads
+            break;
         default:
             print_usage();
             exit(EXIT_FAILURE);
@@ -53,7 +59,7 @@ int main(int argc, char *argv[])
         print_usage();
         exit(EXIT_FAILURE);
     }
-    double ** weight_grid = cumulatve_weight_v2(n_sample, &grid_size, upper_bound, lower_bound, "o");
+    double ** weight_grid = cumulatve_weight_v2(n_sample, grid_size, upper_bound, lower_bound, "o", scale);
     save_cumulated_weight(n_sample, grid_size + 2, weight_grid, outputfile);
     free_integral_grid(weight_grid, n_sample);
     printf("%d\n", grid_size);

@@ -14,6 +14,7 @@ typedef struct
     char *sfs_file;
     double upper_bound;
     double lower_bound;
+    int grid_size;
 } Args;
 
 /**
@@ -76,6 +77,7 @@ void usage(char *prog_name)
     fprintf(stderr, "  -b, --blocks <num_blocks>      Number of blocks (default: 3)\n");
     fprintf(stderr, "  -u, --upper_bound <value>      Upper bound for time grid in Ne(0) generations (double, default: 1, must be positive)\n");
     fprintf(stderr, "  -l, --lower_bound <value>      lower bound for time grid in Ne(0) generations (double, default: 1e-4, must be positive)\n");
+    fprintf(stderr, "  -n, --grid_size <value>        number of tme point between lower bound and uppper bount(integer, default: 33\n");
     fprintf(stderr, "  -c, --changes <value>      \n");
     fprintf(stderr, "      --help                     Display this help and exit\n");
 }
@@ -91,6 +93,7 @@ int parse_args(int argc, char *argv[], Args *args)
     args->lower_bound = 1e-4;
     args->changes = 5;
     args->recent = -1.;
+    args->grid_size = 35;
 
     // Define long options
     static struct option long_options[] = {
@@ -101,6 +104,7 @@ int parse_args(int argc, char *argv[], Args *args)
         {"blocks", required_argument, 0, 'b'},
         {"upper_bound", required_argument, 0, 'u'},
         {"lower_bound", required_argument, 0, 'l'},
+        {"grid_size", required_argument, 0, 'n'},
         {"recent", required_argument, 0, 'r'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0} // End of list
@@ -108,12 +112,15 @@ int parse_args(int argc, char *argv[], Args *args)
 
     // Parse command-line arguments
     int opt;
-    while ((opt = getopt_long(argc, argv, "c:p:o:b:l:u:h:s:r:", long_options, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "c:p:o:b:l:u:h:s:r:n:", long_options, NULL)) != -1)
     {
         switch (opt)
         {
         case 'p':
             args->prefixe = optarg;
+            break;
+        case 'n':
+            args->grid_size = atoi(optarg);
             break;
         case 's':
             args->sfs_file = optarg;
@@ -257,15 +264,14 @@ int main(int argc, char *argv[])
     double **sfs = malloc(sizeof(double *) * 2);
     sfs[0] = readSFSFromFile(args.sfs_file, &size);
     int n_sample = size + 1; // n_sample doit être spécifié
-    int grid_size;
     if (args.recent > 0)
         args.lower_bound = 1. / (double)(args.recent * n_sample);
     char *outfile = construct_output_filepath(args.prefixe, "scenarios.txt");
-    double **cumul_weight = cumulatve_weight_v2(n_sample, &grid_size, args.upper_bound, args.lower_bound, outfile);
+    double **cumul_weight = cumulatve_weight_v2(n_sample, args.grid_size, args.upper_bound, args.lower_bound, outfile, 1);
 
     if (!args.oriented)
     {
-        fold_sfs(sfs, cumul_weight, size, grid_size);
+        fold_sfs(sfs, cumul_weight, size, args.grid_size);
         size = size / 2 + size % 2;
     }
 
@@ -274,7 +280,7 @@ int main(int argc, char *argv[])
         printf("%f %f \n", sfs[0][i], sfs[1][i]);
     clock_t start_time = clock(); // Start time measurement
 
-    solution *list_solution = find_scenario(size, cumul_weight, sfs, grid_size, n_sample, args.changes);
+    solution *list_solution = find_scenario(size, cumul_weight, sfs, args.grid_size, n_sample, args.changes);
     solution *list_solution2;
     if (args.recent > 0)
         list_solution2 = recent_infrence(list_solution, args.changes, sfs, cumul_weight, size, n_sample);

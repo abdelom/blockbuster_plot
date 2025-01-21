@@ -12,37 +12,6 @@ void free_integral_grid(double **cjk_grid, int n_sample)
     free(cjk_grid);        // Free the main array
 }
 
-// double **cumulatve_weight(int n_sample, int *grid_size, double upper_bound, double lower_bound, char *file_name)
-// {
-//     /**
-//      * @brief Computes the cumulative branch length grid over time based on the sample size and grid size.
-//      *
-//      * This function calculates a cumulative branch length with i descendant in the present grid using the integral grid and P_i,k values.
-//      * It first computes the integral grid using the provided sample size, grid size, upper bound,
-//      * and the number of processes. Then, it calculates the P_i,k values and multiplies them with
-//      * the integral grid to obtain the weight grid. Finally, it adjusts the last column of the weight
-//      * grid to ensure that it represents the inverse of the number of descendants. (cumulative bancg lngth at the infinity)
-//      * @param n_sample The sample size (number of individuals) used for the calculations.
-//      * @param grid_size The size of the grid for integration.
-//      * @param upper_bound The upper bound for the integration.
-//      * @param num_proc The number of processes for parallel computation.
-//      * @return A pointer to a dynamically allocated 2D array (double**) containing the cumulative branch lengths.
-//      */
-//     double **integral_grid = integral_grid_calcul(n_sample, grid_size, upper_bound, lower_bound, file_name); // Compute the integral grid
-//     double *pik = k_pik_2(n_sample);                                                            // Calculate P_i,k values
-//     double **weight_grid = malloc((n_sample - 1) * sizeof(double *));                           // Allocate memory for the weight grid
-//     for (int i = 0; i < n_sample - 1; i++)
-//         weight_grid[i] = calloc(*grid_size + 2, sizeof(double));                // Initialize each row of the weight grid
-//     matrix_multiply(n_sample, *grid_size + 2, pik, integral_grid, weight_grid); // Multiply P_i,k with the integral grid to compute weights
-//     for (int i = 0; i < n_sample - 1; i++)
-//         weight_grid[i][*grid_size + 1] = round(1e6 / (double)(i + 1)) / 1e6; // Set the last column of weight grid to the inverse of descendants
-//     free_integral_grid(integral_grid, n_sample);                             // Free the memory allocated for the integral grid
-//     free(pik);                                                               // Free the memory allocated for P_i,k values
-//     return weight_grid;                                                      // Return the computed weight grid
-// }
-
-
-
 void matrix_multiply(int n, int t, double *A, double **B, double **C)
 {
     /**
@@ -110,7 +79,6 @@ double* generate_logarithmic_scale(int grid_size, double upper_bound, double low
         fprintf(stderr, "Memory allocation failed.\n");
         return NULL;
     }    
-    printf("aaa\n\n");
     // Open the file for writing
     FILE* file = fopen(file_name, "w");
     if (!file) {
@@ -132,9 +100,51 @@ double* generate_logarithmic_scale(int grid_size, double upper_bound, double low
     
     log_scale[grid_size - 1] = 2.0;
     fprintf(file, "%.10f\n", log_scale[grid_size - 1]);
-
     fclose(file);
     return log_scale;
+}
+
+/**
+ * Generates a list of numbers linearly spaced between two given bounds, writes them to a file,
+ * and returns them in a dynamically allocated array.
+ *
+ * @param grid_size  The number of points to generate (must be > 0).
+ * @param upper_bound The upper bound of the linear scale.
+ * @param lower_bound The lower bound of the linear scale.
+ * @param file_name  The name of the file where the points will be saved.
+ * @return           A pointer to the dynamically allocated array of points, or NULL if an error occurs.
+ */
+double* generate_linear_scale(int grid_size, double upper_bound, double lower_bound, char *file_name) 
+{
+    // Allocate memory for the points
+    double* linear_scale = malloc(grid_size * sizeof(double));
+    if (!linear_scale) {
+        fprintf(stderr, "Memory allocation failed.\n");
+        return NULL;
+    }
+
+    // Open the file for writing
+    FILE* file = fopen(file_name, "w");
+    if (!file) {
+        fprintf(stderr, "Failed to open the file.\n");
+        free(linear_scale);
+        return NULL;
+    }
+
+    // Generate linearly spaced points
+    double step = (upper_bound - lower_bound) / (grid_size - 2);
+
+    for (int i = 0; i < grid_size - 1; i++) {
+        linear_scale[i] = lower_bound + i * step;
+        fprintf(file, "%.10f\n", linear_scale[i]);
+    }
+
+    // Ensure the last point is 2.0 (if it fits within the range)
+    linear_scale[grid_size - 1] = 2.0;
+    fprintf(file, "%.10f\n", linear_scale[grid_size - 1]);
+
+    fclose(file);
+    return linear_scale;
 }
 
 void save_cumulated_weight(int n_sample, int grid_size, double **matrix, char *filename)
@@ -222,19 +232,22 @@ void weigth_grid_i(double **weight_grid, long double *wik, int col, int n_sample
     free(vkj);
 }
 
-double **cumulatve_weight_v2(int n_sample, int *grid_size, double upper_bound, double lower_bound, char *file_name)
+double **cumulatve_weight_v2(int n_sample, int grid_size, double upper_bound, double lower_bound, char *file_name, int log)
 {
     //double *H = scale_time(grid_size, upper_bound, lower_bound, file_name);
-    *grid_size = 35;
-    double * H = generate_logarithmic_scale(*grid_size, upper_bound, lower_bound, file_name); 
+    double * H;
+    if(log) 
+        H = generate_logarithmic_scale(grid_size, upper_bound, lower_bound, file_name); 
+    else
+        H = generate_linear_scale(grid_size, upper_bound, lower_bound, file_name);
     long double *wik = Wik(n_sample);                                 // Calculate P_i,k values
     double **weight_grid = malloc((n_sample - 1) * sizeof(double *)); // Allocate memory for the weight grid
     for (int i = 0; i < n_sample - 1; i++)
-        weight_grid[i] = calloc(*grid_size + 2, sizeof(double)); // Initialize each row of the weight grid
-    for (int i = 1; i < *grid_size + 1; i++)
+        weight_grid[i] = calloc(grid_size + 2, sizeof(double)); // Initialize each row of the weight grid
+    for (int i = 1; i < grid_size + 1; i++)
         weigth_grid_i(weight_grid, wik, i, n_sample, H[i - 1]);
     // Free the memory allocated for P_i,k values
-    weigth_grid_i(weight_grid, wik, *grid_size + 1, n_sample, INFINITY);
+    weigth_grid_i(weight_grid, wik, grid_size + 1, n_sample, INFINITY);
     free(H);
     free(wik);
     return weight_grid;

@@ -448,20 +448,6 @@ void save_solution(solution sol, int n_sample, char *out_file, double const_ren,
     free(sol.fitted_sfs);
 }
 
-void print_solution(solution sol, int n_sample, double const_ren)
-{
-
-    // Write solution data to file
-    printf(" >\n %f ", sol.log_likelihood);
-    printf("%f ", sol.distance);
-
-    for (int i = 0; i < sol.nb_breakpoints; i++)
-        printf("%d ", sol.breakpoints[i]);
-    for (int i = 0; i <= sol.nb_breakpoints; i++)
-        printf("%f ", sol.thetas[i] * const_ren);
-    printf("\n");
-    // Free allocated memory
-}
 
 void thetas_se(solution *sol, int sfs_length, double **cumul_weight)
 {
@@ -515,7 +501,6 @@ solution generate_brk_combinations(int nb_breakpoints, int sfs_length, double **
     // Initialize a temporary solution to keep track of the best found solution
     solution tmp_sol = copy_solution(sol);
     // Loop through all breakpoint combinations until `arret` is set to 0
-    //print_solution(tmp_sol, n_sample, 1);
     while (arret && nb_breakpoints > 0)
     {
         // Generate the next combination of breakpoints
@@ -523,7 +508,6 @@ solution generate_brk_combinations(int nb_breakpoints, int sfs_length, double **
         // Calculate the solution (log-likelihood and distance) for the new combination
         system_resolution(&sol, sfs, cumul_weight, sfs_length);
         // if(all_positive(sol.thetas, sol.nb_breakpoints))
-        //     print_solution(sol, n_sample, 1);
         // If the new solution has a higher log-likelihood and all theta values are positive, keep its
         if (isnan(tmp_sol.log_likelihood) || sol.log_likelihood > tmp_sol.log_likelihood || (all_positive(sol.thetas, sol.nb_breakpoints) && !all_positive(tmp_sol.thetas, sol.nb_breakpoints))) //
         {
