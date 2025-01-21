@@ -262,59 +262,6 @@ double distance(double *sfs_obs, double *sfs_theo, int n)
     return sqrt(distance); // Return the square root of the accumulated distance
 }
 
-void replace_negative_with_nearest_average(double *theta, size_t n)
-{
-    for (size_t i = 0; i < n; i++)
-    {
-        if (theta[i] < 0)
-        {
-            double prev_positive = 0.0; // Valeur par défaut pour le bord inférieur
-            double next_positive = 0.0;
-            int found_prev = 0;
-            int found_next = 0;
-
-            // Cherche la première valeur positive en amont
-            for (size_t j = i; j > 0; j--)
-            {
-                if (theta[j - 1] > 0)
-                {
-                    prev_positive = theta[j - 1];
-                    found_prev = 1;
-                    break;
-                }
-            }
-
-            // Cherche la première valeur positive en aval
-            for (size_t j = i + 1; j < n; j++)
-            {
-                if (theta[j] > 0)
-                {
-                    next_positive = theta[j];
-                    found_next = 1;
-                    break;
-                }
-            }
-
-            // Calcul de la moyenne des valeurs positives les plus proches
-            if (found_prev && found_next)
-            {
-                theta[i] = (prev_positive + next_positive) / 2.0;
-            }
-            else if (found_prev)
-            {
-                theta[i] = prev_positive / 2.0; // moyenne entre prev_positive et 0
-            }
-            else if (found_next)
-            {
-                theta[i] = next_positive / 2.0; // moyenne entre next_positive et 0
-            }
-            else
-            {
-                theta[i] = 0; // Si tout est négatif (rare mais au cas où)
-            }
-        }
-    }
-}
 
 void replace_negative_with_1(double *theta, size_t n)
 {
@@ -423,41 +370,6 @@ void relatif_to_absolute_time(double *time, double *thetas, int nb_breakpoints)
     for (int i = 1; i < nb_breakpoints; i++)
         time[i] += time[i - 1];
 }
-
-// /**
-//  * Generates times at each population size change breakpoint based on time indices.
-//  *
-//  * The function converts time indices into relative times on a logarithmic or linear scale,
-//  * depending on the breakpoint index. These relative times, derived from the grid indices,
-//  * represent intervals between population size changes normalized by the sample size.
-//  * The relative times are then converted to absolute times based on population size ratios.
-//  *
-//  * @param sol       The `solution` structure containing breakpoints and mutation rates (thetas).
-//  * @param n_sample  Sample size, used to normalize initial time values.
-//  *
-//  * @return          Array of absolute times in Ne * generations for each breakpoint.
-//  */
-// double *breakpoints_to_times(solution sol, int n_sample)
-// {
-//     double *time = malloc(sizeof(double) * sol.nb_breakpoints);
-
-//     // Calculate relative times from breakpoint indices, scaling based on index.
-//     for (int i = 0; i < sol.nb_breakpoints; i++)
-//     {
-//         // if (sol.breakpoints[i] < 8)
-//         //     // Linear scaling for early breakpoints.
-//         //     time[i] = (double)(sol.breakpoints[i]) / (double)n_sample;
-//         // else
-//         // Exponential scaling for later breakpoints, for larger intervals.
-//         // time[i] = 8. * pow(8. / 7., sol.breakpoints[i] - 8) / (double)n_sample;
-//         time[i] = 1e-3 * pow(5. / 4., sol.breakpoints[i]);
-//     }
-
-//     // Convert relative times to absolute times by accounting for historical Ne ratios.
-//     relatif_to_absolute_time(time, sol.thetas, sol.nb_breakpoints);
-
-//     return time; // Return the calculated absolute times.
-// }
 
 /**
  * Checks if all mutation rate values (thetas) are positive.
@@ -634,22 +546,10 @@ solution *find_scenario(int sfs_length, double **cumul_weight, double **sfs, int
     if ((int)const_ren == 2)
         const_ren = 1.;
     solution  * liste_solution = malloc(sizeof(solution) * (changes + 1));
-    //liste_solution[0] = generate_brk_combinations(0, sfs_length, cumul_weight, sfs, grid_size, n_sample);
-    //save_solution(sol, n_sample, "a", out_file, const_ren, sfs_length);
-    //liste_solution[1] = generate_brk_combinations(1, sfs_length, cumul_weight, sfs, grid_size, n_sample);
-    //save_solution(sol_p1, n_sample, "a", out_file, const_ren, sfs_length);
     int nb_breakpoints = 0;
-    while (nb_breakpoints <= changes) //-2 * (sol.log_likelihood - sol_p1.log_likelihood) > 5.99)
+    while (nb_breakpoints <= changes)
     {
-        // clear_solution(sol);
-        // sol = copy_solution(sol_p1);
-        // clear_solution(sol_p1);
-        // if (nb_breakpoints <= changes)
         liste_solution[nb_breakpoints] = generate_brk_combinations(nb_breakpoints, sfs_length, cumul_weight, sfs, grid_size, n_sample);
-        //save_solution(liste_solution[nb_breakpoints], n_sample, "a", out_file, const_ren, sfs_length);
-        // else
-        //     sol_p1 = add_breakpoint(sol, sfs_length, cumul_weight, sfs, grid_size, n_sample); // generate_brk_combinations(nb_breakpoints, sfs_length, cumul_weight, sfs, grid_size);
-        //save_solution(sol_p1, n_sample, "a", out_file, const_ren, sfs_length);
         nb_breakpoints++;
     }
     //clear_solution(sol_p1);
@@ -697,29 +597,6 @@ solution * recent_infrence(solution *list_solution, int changes, double **sfs, d
     return list_solution_r;
 }
 
-// void ecrire_matrice_fichier(const char *nom_fichier, double *matrice, int n_sample, int n_theta)
-// {
-//     FILE *fichier = fopen(nom_fichier, "w");
-//     if (fichier == NULL)
-//     {
-//         printf("Erreur lors de l'ouverture du fichier\n");
-//         return;
-//     }
-//     for (int k = 0; k < n_sample - 1; k++)
-//     {
-//         for (int j = 0; j < n_theta; j++)
-//         {
-//             fprintf(fichier, "%.15f", matrice[k * n_theta + j]);
-//             if (j < n_theta)
-//             {
-//                 fprintf(fichier, " "); // Séparation des colonnes par un espace
-//             }
-//         }
-//         fprintf(fichier, "\n"); // Nouvelle ligne après chaque ligne de la matrice
-//     }
-//     fclose(fichier);
-// }
-
 // Fonction de comparaison pour qsort
 int comparer(const void *a, const void *b)
 {
@@ -744,7 +621,6 @@ double inferior_count(int *tirages, int taille, double valeur)
 void site_sampling(int n, int *tirages, int taille)
 {
     int *indices = malloc(sizeof(int) * n); // Tableau pour stocker les indices de 0 à n-1
-
     // Initialiser le tableau des indices de 0 à n-1
     for (int i = 0; i < n; i++)
         indices[i] = i;
@@ -815,108 +691,8 @@ void fold_sfs(double **sfs, double **cumulatve_weight, int sfs_length, int grid_
 {
     for (int i = 0; i < sfs_length / 2; i++)
     {
-        // sfs[1][i] += sfs[1][sfs_length - 1 - i];
         sfs[0][i] += sfs[0][sfs_length - 1 - i];
         for (int j = 0; j < grid_size + 2; j++)
             cumulatve_weight[i][j] += cumulatve_weight[sfs_length - 1 - i][j];
     }
-    // sfs = realloc(sfs, sfs_length / 2 + sfs_length % 2);
-    //  P_ik = realloc(P_ik, sfs_length * (sfs_length / 2 + sfs_length % 2));
-}
-
-int sol_brk_m1(solution sol, int brk)
-{
-    if (sol.breakpoints[brk] == 1)
-        return 0;
-    if (brk > 0)
-    {
-        if (sol.breakpoints[brk] - sol.breakpoints[brk - 1] == 0)
-            return 0;
-    }
-    return 1;
-}
-
-int sol_brk_p1(solution sol, int brk, int grid_size)
-{
-    if (sol.breakpoints[brk] == grid_size)
-        return 0;
-    if (brk < sol.nb_breakpoints - 1)
-    {
-        if (sol.breakpoints[brk] - sol.breakpoints[brk + 1] == 0)
-            return 0;
-    }
-    return 1;
-}
-
-solution refine_solution_brk(solution sol, int sfs_length, double **cumul_weight, double **sfs, int grid_size, int brk)
-{
-    if (sol_brk_m1(sol, brk))
-    {
-        solution sol_i = copy_solution(sol);
-        sol_i.breakpoints[brk] -= 1;
-        system_resolution(&sol_i, sfs, cumul_weight, sfs_length);
-        if (sol_i.log_likelihood > sol.log_likelihood) // && all_positive(sol_i.thetas, sol_i.nb_breakpoints))
-            return sol_i;
-        clear_solution(sol_i);
-    }
-    if (sol_brk_p1(sol, brk, grid_size))
-    {
-        solution sol_s = copy_solution(sol);
-        sol_s.breakpoints[brk] += 1;
-        system_resolution(&sol_s, sfs, cumul_weight, sfs_length);
-        if (sol_s.log_likelihood > sol.log_likelihood) // && all_positive(sol_s.thetas, sol_s.nb_breakpoints))
-            return sol_s;
-        clear_solution(sol_s);
-    }
-    return copy_solution(sol);
-}
-
-solution refine_solution(solution sol, int sfs_length, double **cumul_weight, double **sfs, int grid_size, int n_sample)
-{
-    solution refine_sol = copy_solution(sol);
-    solution sol_tmp = copy_solution(sol);
-    sol_tmp.log_likelihood = -INFINITY;
-    sol_tmp.distance = INFINITY;
-    while (sol_tmp.log_likelihood < refine_sol.log_likelihood) // && all_positive(refine_sol.thetas, refine_sol.nb_breakpoints))
-    {
-        // printf("refine \n");
-        for (int i = 0; i < sol.nb_breakpoints; i++)
-        {
-            clear_solution(sol_tmp);
-            sol_tmp = refine_solution_brk(refine_sol, sfs_length, cumul_weight, sfs, grid_size, i);
-            if (sol_tmp.log_likelihood > refine_sol.log_likelihood)
-            {
-                clear_solution(refine_sol);
-                refine_sol = copy_solution(sol_tmp);
-            }
-        }
-    }
-    clear_solution(sol_tmp);
-    return refine_sol;
-}
-
-solution add_breakpoint(solution solm_1, int sfs_length, double **cumul_weight, double **sfs, int grid_size, int n_sample)
-{
-    solution sol = init_solution_size(solm_1.nb_breakpoints + 1);
-    solution solution_tmp = init_solution_size(solm_1.nb_breakpoints + 1);
-    solution_tmp.log_likelihood = -INFINITY;
-    solution_tmp.distance = INFINITY;
-    printf("%d\n", sol.nb_breakpoints);
-    int j = 0;
-    for (int i = 1; i <= grid_size; i++)
-    {
-        if (i == solm_1.breakpoints[j])
-        {
-            j++;
-            continue;
-        }
-        copy_and_insert_in_sorted_array(solm_1.breakpoints, sol.nb_breakpoints, i, sol.breakpoints);
-        system_resolution(&sol, sfs, cumul_weight, sfs_length);
-        if (solution_tmp.log_likelihood < sol.log_likelihood) // && all_positive(sol.thetas, sol.nb_breakpoints))
-        {
-            clear_solution(solution_tmp);
-            solution_tmp = copy_solution(sol);
-        }
-    }
-    return solution_tmp; //(solution_tmp, sfs_length, cumul_weight, sfs, grid_size, n_sample);
 }

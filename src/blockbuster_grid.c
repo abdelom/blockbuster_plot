@@ -89,29 +89,6 @@ long double *init_wik(int n_sample)
     return W_i_k;
 }
 
-double *scale_time(int *grid_size, double upper_bound, double lower_bound, char *file_name)
-{
-    double *time_scale = malloc(sizeof(double));
-    time_scale[0] = lower_bound;
-    int index = 1;
-    FILE *file = fopen(file_name, "w");
-    fprintf(file, "%f\n", time_scale[index - 1]);
-    while (time_scale[index - 1] < upper_bound)
-    {
-        time_scale = realloc(time_scale, sizeof(double) * (index + 1));
-        // if (index < 8)
-        //     time_scale[index] = time_scale[index - 1] + 1. / n_sample;
-        // else
-            time_scale[index] = 4. * time_scale[index - 1] / 3.;
-        index += 1;
-        fprintf(file, "%f\n", time_scale[index - 1]);
-    }
-    fprintf(file, "%f\n", 2.);
-    *grid_size = index;
-    fclose(file);
-    return time_scale;
-}
-
 
 /**
  * Generates a list of numbers logarithmically spaced between two given bounds, writes them to a file,
@@ -159,23 +136,6 @@ double* generate_logarithmic_scale(int grid_size, double upper_bound, double low
     fclose(file);
     return log_scale;
 }
-
-
-// double *scale_time2(int *grid_size, int n_sample, double upper_bound, double lower_bound, char *file_name)
-// {
-//     double *time_scale = malloc(sizeof(double) * 50);
-//     printf("%d ", n_sample);
-//     *grid_size = 50;
-//     FILE *file = fopen(file_name, "w");
-//     for(int i = 0; i < 50; i ++)
-//     {
-//         printf("%d", i);
-//         time_scale[i] = (i + 1) * 4e-2;
-//     }
-//     fprintf(file, "%f\n", 2.);
-//     fclose(file);
-//     return time_scale;
-// } 
 
 void save_cumulated_weight(int n_sample, int grid_size, double **matrix, char *filename)
 {
