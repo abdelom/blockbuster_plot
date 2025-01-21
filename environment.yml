@@ -1,0 +1,26 @@
+name: past_finder_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  # Python and necessary packages
+  - python=3.8
+  - numpy
+  - matplotlib
+
+  # C Compiler and dependencies
+  - gcc
+  - make
+  - mpfr
+  - gmp
+  - openmp
+
+  # Additional utilities
+  - cmake
+  - pkg-config
+
+  # Optional: System utilities for file handling
+  - coreutils
+  - findutils
+  - libgcc
+
