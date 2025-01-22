@@ -8,12 +8,20 @@
 #include "blockbuster_grid.h"
 #include <getopt.h>
 
+/**
+ * Prints the usage information for the program, detailing all the available command-line options.
+ */
 void print_usage()
 {
-    printf("Usage: program -n n_sample [-u upper_bound] [-g grid_size] [-c num_core]\n");
+    printf("Usage: program -n n_sample [-u upper_bound] [-l lower_bound] [-g grid_size] [-s scale] [-o outputfile]\n");
     printf("  -n n_sample       : Required. The sample size (positive integer).\n");
-    printf("  -u upper_bound    : Optional. The upper bound (default = 1.0).\n");
+    printf("  -u upper_bound    : Optional. The upper bound for the time scale (default = 1.0).\n");
+    printf("  -l lower_bound    : Optional. The lower bound for the time scale (default = 1e-4).\n");
+    printf("  -g grid_size      : Optional. The size of the grid representing time intervals (default = 35).\n");
+    printf("  -s scale          : Optional. Time scale type: 1 for logarithmic, 0 for linear (default = 1).\n");
+    printf("  -o outputfile     : Optional. The output file name for saving results (default = 'grid.txt').\n");
 }
+
 
 int main(int argc, char *argv[])
 {

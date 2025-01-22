@@ -2,7 +2,7 @@
 
 ## Overview
 
-Past Finder is a software tool designed to infer past population size changes based on Site Frequency Spectrum (SFS) data. It combines a C program (`past_finder_main.c`) that processes the SFS and a Python script that visualizes and analyzes the results.
+Past Finder is a software tool designed to infer past population size changes based on Site Frequency Spectrum (SFS) data. It combines a C program (`blockbuster_main.c`) that processes the SFS and a Python script that visualizes and analyzes the results.
 
 ## Requirements
 
@@ -18,7 +18,6 @@ Python:
 C Compiler and Build Tools:
 - GCC (or appropriate compiler for your platform)
 - Make
-- GMP (for arbitrary-precision arithmetic)
 
 Additional Utilities:
 - CMake (if building C dependencies)
@@ -45,12 +44,12 @@ conda activate past_finder_env
 
 3. Build the C Program
 
-The C program `past_finder_main.c` is located in the `./src/` directory. To build it, use the `Makefile` provided, or run the following commands:
+The C program `blockbuster_main.c` is located in the `./src/` directory. To build it, use the `Makefile` provided, or run the following commands:
 
 cd src
 make
 
-This will generate the executable `past_finder_main` in the `./bin/` directory.
+This will generate the executable `blockbuster_main` in the `./bin/` directory.
 
 4. Running the Programs
 
@@ -62,9 +61,9 @@ bash past.sh --sfs <path_to_sfs_file> --prefixe_directory <output_directory> [op
 
 After building the C program, you can run the C program and Python script as follows:
 
-b. Running the C Program (`past_finder_main`)
+b. Running the C Program (`blockbuster_main`)
 
-./bin/past_finder_main -p <output_directory> -s <sfs_file> 
+./bin/blockbuster_main -p <output_directory> -s <sfs_file> 
 
 - `-p` (required): Prefix directory where the output will be stored.
 - `-s` (required): The Site Frequency Spectrum (SFS) file.

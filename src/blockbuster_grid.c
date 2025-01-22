@@ -232,23 +232,57 @@ void weigth_grid_i(double **weight_grid, long double *wik, int col, int n_sample
     free(vkj);
 }
 
+/**
+ * Computes the cumulative branch lengths for a given set of sample sizes and time intervals
+ * based on either a logarithmic or linear scale for time.
+ * This function generates weights used for regression by computing the cumulative branch lengths
+ * for different descendant groups within the specified time intervals.
+ *
+ * @param n_sample     The number of samples.
+ * @param grid_size    The size of the grid representing the time intervals.
+ * @param upper_bound  The upper bound for the time scale.
+ * @param lower_bound  The lower bound for the time scale.
+ * @param file_name    The file name for saving the scale (if needed).
+ * @param log          Flag to choose between logarithmic (1) or linear (0) scale for time.
+ *
+ * @return A 2D array `weight_grid` of size `(n_sample - 1) * (grid_size + 2)` containing 
+ *         the cumulative branch lengths used in regression, where each entry 
+ *         `weight_grid[i][j]` represents the cumulative branch length for `i + 1` descendants
+ *         in the present up to time interval `j`. The caller is responsible for freeing this memory.
+ *
+ * Example usage:
+ *     double **weights = cumulatve_weight_v2(n_sample, grid_size, upper_bound, lower_bound, file_name, log);
+ *     // Use `weights` here
+ *     free(weights);  // Free the allocated memory when done
+ */
 double **cumulatve_weight_v2(int n_sample, int grid_size, double upper_bound, double lower_bound, char *file_name, int log)
 {
-    //double *H = scale_time(grid_size, upper_bound, lower_bound, file_name);
-    double * H;
-    if(log) 
-        H = generate_logarithmic_scale(grid_size, upper_bound, lower_bound, file_name); 
+    // Generate the time scale (either logarithmic or linear based on the `log` flag)
+    double *H;
+    if (log)
+        H = generate_logarithmic_scale(grid_size, upper_bound, lower_bound, file_name); // Logarithmic scale
     else
-        H = generate_linear_scale(grid_size, upper_bound, lower_bound, file_name);
-    long double *wik = Wik(n_sample);                                 // Calculate P_i,k values
-    double **weight_grid = malloc((n_sample - 1) * sizeof(double *)); // Allocate memory for the weight grid
+        H = generate_linear_scale(grid_size, upper_bound, lower_bound, file_name); // Linear scale
+
+    // See kimmel and polanski 2003
+    long double *wik = Wik(n_sample); 
+
+    // Allocate memory for the weight grid, which stores cumulative branch lengths
+    double **weight_grid = malloc((n_sample - 1) * sizeof(double *)); // (n_sample - 1) rows for different descendant groups
     for (int i = 0; i < n_sample - 1; i++)
-        weight_grid[i] = calloc(grid_size + 2, sizeof(double)); // Initialize each row of the weight grid
+        weight_grid[i] = calloc(grid_size + 2, sizeof(double)); // Initialize each row with size grid_size + 2
+
+    // Calculate the cumulative branch lengths for each descendant group in the grid
     for (int i = 1; i < grid_size + 1; i++)
         weigth_grid_i(weight_grid, wik, i, n_sample, H[i - 1]);
-    // Free the memory allocated for P_i,k values
+
+    // Finalize the cumulative branch lengths for the last time interval (infinity)
     weigth_grid_i(weight_grid, wik, grid_size + 1, n_sample, INFINITY);
+
+    // Free allocated memory for the time scale and P_i,k values
     free(H);
     free(wik);
+
+    // Return the computed cumulative weight grid
     return weight_grid;
 }

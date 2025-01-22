@@ -36,11 +36,12 @@ MUTATION_RATE=-1
 GENERATION_TIME=-1
 UPPER_BOUND=1
 LOWER_BOUND=1e-4
+GRID_SIZE=35
 CHANGES=5
 RECENT="-1"
 
 # Parse command-line arguments with getopt
-ARGS=$(getopt -o "s:p:o:b:L:m:g:u:l:c:h:r:" -l "sfs:,prefixe_directory:,oriented:,blocks:,genome_length:,mutation_rate:,generation_time:,upper_bound:,lower_bound:,changes:,help" -- "$@")
+ARGS=$(getopt -o "s:p:o:b:L:m:g:u:l:c:h:r:n:" -l "sfs:,prefixe_directory:,oriented:,blocks:,genome_length:,mutation_rate:,generation_time:,upper_bound:,lower_bound:,changes:,grid_size:,help" -- "$@")
 if [ $? -ne 0 ]; then
     usage
 fi
@@ -61,6 +62,7 @@ while true; do
         -l|--lower_bound) LOWER_BOUND="$2"; shift 2;;
         -c|--changes) CHANGES="$2"; shift 2;;
         -r|--recent) RECENT="$2"; shift 2;;
+        -n|--grid_size) GRID_SIZE="$2"; shift 2;;
         --help) usage; shift;;
         --) shift; break;;
         *) usage; break;;
@@ -90,12 +92,13 @@ echo "Generation time: $GENERATION_TIME"
 echo "Upper bound: $UPPER_BOUND"
 echo "Lower bound: $LOWER_BOUND"
 echo "Number of changes: $CHANGES"
+echo "Number of changes: $GRID_SIZE"
 
 # Measure execution time for C program
 echo "Running C program..."
 START_TIME_C=$(date +%s)
-echo --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT"
-./bin/blockbuster_main --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT"
+echo --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT" -n "$GRID_SIZE"
+./bin/blockbuster_main --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT" -n "$GRID_SIZE"
 
 if [ $? -ne 0 ]; then
     echo "Error: C program failed to execute. Exiting."

@@ -151,7 +151,7 @@ void regressor_matrix(int n, int m, double *weight, double *regressors)
 }
 
 /**
- * Computes the theoretical Site Frequency Spectrum (SFS) based on population mutation rates and regression weights.
+ * Computes the theoretical Site Frequency Spectrum (SFS) based on estimated population mutation rates and regression weights.
  *
  * @param thetas    Pointer to the array of population mutation rates for each time interval.
  * @param weight    Pointer to the array representing the regression weights (branch lengths for a certain number of descendants in the present).
@@ -215,7 +215,7 @@ double *SFS_to_freq(double *sfs_theo, int n)
 }
 
 /**
- * Calculates the log likelihood of the observed Site Frequency Spectrum (SFS) given the theoretical SFS.
+ * Calculates the log likelihood of the observed Site Frequency Spectrum (SFS) given the theoretical SFS, computed from etimated parameters.
  *
  * @param sfs_obs Pointer to the array representing the observed SFS (counts).
  * @param sfs_theo Pointer to the array representing the theoretical SFS (counts).
@@ -263,16 +263,34 @@ double distance(double *sfs_obs, double *sfs_theo, int n)
 }
 
 
+// Replaces all negative values in a population mutation rate vector with 1.
+//
+// Parameters:
+// - theta: Pointer to a vector of population mutation rates obtained via 
+//          a least-squares method. The parameter space is not constrained, 
+//          so negative values may occur.
+// - n: Size of the vector.
+//
+// This function iterates through the vector `theta`. If any element is 
+// negative, it is replaced with 1. This ensures that the vector contains 
+// only valid mutation rates.
+//
+// Arguments:
+// - double *theta: A vector of population mutation rates.
+// - size_t n: The number of elements in the vector.
+//
+// Complexity: O(n), where n is the size of the vector.
 void replace_negative_with_1(double *theta, size_t n)
 {
-    for (size_t i = 0; i < n; i++)
+    for (size_t i = 0; i < n; i++) // Iterate through each element of the vector.
     {
-        if (theta[i] < 0)
+        if (theta[i] < 0) // Check if the current value is negative.
         {
-            theta[i] = 1.;
+            theta[i] = 1.; // Replace the negative value with 1.
         }
     }
 }
+
 
 /**
  * Resolves the system of equations to estimate population mutation rates (thetas) and calculates log likelihood and distance from observed sfs given fixed times of change.
@@ -284,7 +302,7 @@ void replace_negative_with_1(double *theta, size_t n)
  *
  * This function performs the following tasks:
  * Assembles regression weights based on the cumulative branch lengths.
- * Performs matrix multiplication to estimate the population mutation rates (thetas).
+ * Performs least square method to estimate the population mutation rates (thetas).
  **/
 void system_resolution(solution *sol, double **sfs, double **cumul_weight, int sfs_length)
 {
@@ -301,20 +319,22 @@ void system_resolution(solution *sol, double **sfs, double **cumul_weight, int s
     // Step 4: Estimate population mutation rates (thetas) using matrix multiplication (X^T X)-1X^T * SFS
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                 sol->nb_breakpoints + 1, 1, sfs_length, 1.0, regressors, sfs_length, sfs[0], 1, 0.0, sol->thetas, 1);
-    replace_negative_with_1(sol->thetas, sol->nb_breakpoints + 1);
+    replace_negative_with_1(sol->thetas, sol->nb_breakpoints + 1); // if thetas are negatives they are replaced by 1 as population sizes cannot be inferior to 0
     double *sfs_theo = SFS_theo(sol->thetas, weight, sfs_length, sol->nb_breakpoints + 1);
     sol->log_likelihood = log_likelihood(sfs[1], sfs_theo, sfs_length);
     sol->distance = distance(sfs[0], sfs_theo, sfs_length);
     free(sfs_theo);
     free(weight);
     free(regressors);
+
+    
 }
 
 /**
  * Generates the next combination of breakpoints in lexicographic order within a specified grid.
  *
- * @param brk            Array representing the current combination of breakpoints.
- *                        This array will be modified in place to hold the next combination.
+ * @param brk            Array representing the current combination of breakpoints. breakpoints are index of times of changes from which cumulative branch lengthes have been computed
+ *                       This array will be modified in place to hold the next combination.
  * @param nb_breakpoints The number of breakpoints (i.e., the size of the `brk` array).
  * @param grid_size      The size of the grid, representing the maximum index range for breakpoints.
  *
@@ -345,31 +365,31 @@ int recursive_bk_combination(int *brk, int nb_breakpoints, int grid_size)
     return 1;
 }
 
-/**
- * Converts relative times in the `time` array to absolute times.
- *
- * Relative times are initially derived from time indices on a grid and represent intervals scaled by
- * effective population sizes at each historical breakpoint. This function adjusts each relative time to
- * an absolute timescale, where times are expressed in units of Ne (effective population size) multiplied
- * by the number of generations.
- *
- * Each interval is scaled by the population size relative to the present, converting times in `time`
- * into cumulative (absolute) times. The absolute times represent the total elapsed time since the present.
- *
- * @param time           Array of relative times, modified in place to store absolute times.
- * @param thetas         Array of population mutation rates, with each rate proportional to the Ne
- *                        at its corresponding time interval.
- * @param nb_breakpoints Number of breakpoints, representing the population size change intervals.
- */
-void relatif_to_absolute_time(double *time, double *thetas, int nb_breakpoints)
-{
-    // Adjust relative times to absolute by scaling each by the relative Ne and accumulating past times.
-    for (int i = nb_breakpoints - 1; i >= 1; i--)
-        time[i] = (time[i] - time[i - 1]) * thetas[i] / thetas[0];
-    // Accumulate times to transform each into an absolute time from the present.
-    for (int i = 1; i < nb_breakpoints; i++)
-        time[i] += time[i - 1];
-}
+// /**
+//  * Converts relative times in the `time` array to absolute times.
+//  *
+//  * Relative times are initially derived from time indices on a grid and represent intervals scaled by
+//  * effective population sizes at each historical breakpoint. This function adjusts each relative time to
+//  * an absolute timescale, where times are expressed in units of Ne (effective population size) multiplied
+//  * by the number of generations.
+//  *
+//  * Each interval is scaled by the population size relative to the present, converting times in `time`
+//  * into cumulative (absolute) times. The absolute times represent the total elapsed time since the present.
+//  *
+//  * @param time           Array of relative times, modified in place to store absolute times.
+//  * @param thetas         Array of population mutation rates, with each rate proportional to the Ne
+//  *                        at its corresponding time interval.
+//  * @param nb_breakpoints Number of breakpoints, representing the population size change intervals.
+//  */
+// void relatif_to_absolute_time(double *time, double *thetas, int nb_breakpoints)
+// {
+//     // Adjust relative times to absolute by scaling each by the relative Ne and accumulating past times.
+//     for (int i = nb_breakpoints - 1; i >= 1; i--)
+//         time[i] = (time[i] - time[i - 1]) * thetas[i] / thetas[0];
+//     // Accumulate times to transform each into an absolute time from the present.
+//     for (int i = 1; i < nb_breakpoints; i++)
+//         time[i] += time[i - 1];
+// }
 
 /**
  * Checks if all mutation rate values (thetas) are positive.
@@ -449,20 +469,57 @@ void save_solution(solution sol, int n_sample, char *out_file, double const_ren,
 }
 
 
+/**
+ * Calculates the standard errors (confidence intervals) for the estimated 
+ * regression weights (thetas).
+ *
+ * @param sol          Pointer to the solution structure containing thetas and other parameters.
+ * @param sfs_length   Length of the Site Frequency Spectrum (number of observations).
+ * @param cumul_weight Pointer to a 2D array of cumulative weights for regression.
+ *
+ * Steps:
+ * 1. Compute the variance of errors (error_var) based on the distance and degrees of freedom.
+ * 2. Assemble regression weights and compute the variance-covariance matrix.
+ * 3. Extract diagonal elements of the variance-covariance matrix to calculate standard errors.
+ */
 void thetas_se(solution *sol, int sfs_length, double **cumul_weight)
 {
     int nb_thetas = sol->nb_breakpoints + 1;
+
+    // Calculate error variance using the residual sum of squares
     double error_var = sol->distance * sol->distance / (sfs_length - nb_thetas);
+
+    // Assemble regression weights
     double *weight = weight_assembly_1d(sfs_length, nb_thetas, sol->breakpoints, cumul_weight);
+
+    // Allocate memory for variance-covariance matrix
     double *XXT = calloc(nb_thetas * nb_thetas, sizeof(double));
     sol->se_thetas = calloc(nb_thetas, sizeof(double));
+
+    // Compute variance-covariance matrix
     varcovar(sfs_length, nb_thetas, weight, XXT);
+
+    // Calculate standard errors for each theta
     for (int j = 0; j < nb_thetas; j++)
         sol->se_thetas[j] = sqrt(error_var * XXT[j * nb_thetas + j]);
+
+    // Free allocated memory
     free(weight);
     free(XXT);
 }
 
+// Calculates the residuals of the linear regression for the observed SFS.
+//
+// Parameters:
+// - sol: Pointer to the solution structure containing breakpoints and thetas.
+// - cumul_weight: 2D array of cumulative weights for the regression.
+// - sfs_length: Length of the observed SFS.
+// - sfs: Array of observed SFS values.
+//
+// Steps:
+// 1. Compute regression weights using `weight_assembly_1d`.
+// 2. Calculate the theoretical SFS (`sol->fitted_sfs`) from the weights and thetas.
+// 3. Compute residuals as the difference between observed and theoretical SFS.
 void residues(solution *sol, double **cumul_weight, int sfs_length, double *sfs)
 {
     int nb_thetas = sol->nb_breakpoints + 1;
@@ -473,6 +530,8 @@ void residues(solution *sol, double **cumul_weight, int sfs_length, double *sfs)
         sol->residues[i] = sfs[i] - sol->fitted_sfs[i];
     free(weight);
 }
+
+
 
 /**
  * Generates and evaluates all possible breakpoint combinations to find the optimal solution
@@ -507,12 +566,11 @@ solution generate_brk_combinations(int nb_breakpoints, int sfs_length, double **
         arret = recursive_bk_combination(sol.breakpoints, nb_breakpoints, grid_size);
         // Calculate the solution (log-likelihood and distance) for the new combination
         system_resolution(&sol, sfs, cumul_weight, sfs_length);
-        // if(all_positive(sol.thetas, sol.nb_breakpoints))
         // If the new solution has a higher log-likelihood and all theta values are positive, keep its
-        if (isnan(tmp_sol.log_likelihood) || sol.log_likelihood > tmp_sol.log_likelihood || (all_positive(sol.thetas, sol.nb_breakpoints) && !all_positive(tmp_sol.thetas, sol.nb_breakpoints))) //
+        if (isnan(tmp_sol.log_likelihood) || sol.log_likelihood > tmp_sol.log_likelihood) // || (all_positive(sol.thetas, sol.nb_breakpoints) && !all_positive(tmp_sol.thetas, sol.nb_breakpoints))) //
         {
-            if (!all_positive(sol.thetas, sol.nb_breakpoints) && all_positive(tmp_sol.thetas, sol.nb_breakpoints))
-                continue;
+            //if (!all_positive(sol.thetas, sol.nb_breakpoints) && all_positive(tmp_sol.thetas, sol.nb_breakpoints))
+                //continue;
             clear_solution(tmp_sol);
             tmp_sol = copy_solution(sol);
         }
@@ -520,25 +578,57 @@ solution generate_brk_combinations(int nb_breakpoints, int sfs_length, double **
     clear_solution(sol);
     thetas_se(&tmp_sol, sfs_length, cumul_weight);
     residues(&tmp_sol, cumul_weight, sfs_length, sfs[0]);
-    // Return the best solution with the optimal breakpoint combination
+    // Return the best solution with the optimal breakpoint combination for a givent nulber of changes in population size
     return tmp_sol;
 }
 
+/**
+ * Finds the best scenarios by generating combinations of breakpoints and solving
+ * the regression for each configuration to estimate population mutation rates (thetas).
+ *
+ * @param sfs_length   Length of the observed Site Frequency Spectrum (SFS).
+ * @param cumul_weight Pointer to a 2D array of cumulative weights for regression.
+ * @param sfs          Pointer to a 2D array where:
+ *                      - sfs[0] is the training SFS used for regression.
+ *                      - sfs[1] is the test SFS used for validation.
+ * @param grid_size    size of the discrete gride of time points
+ * @param n_sample     sample size
+ * @param changes      Maximum number of allowed breakpoint changes.
+ *
+ * @return             Array of solutions containing the best solution for each number of 
+ *                     population size changes, from 0 to `changes`. Each solution includes
+ *                     estimated thetas and associated metrics (log-likelihood, distance).
+ *
+ * Steps:
+ * 1. Calculate `const_ren`, the proportion of sites represented in the training SFS (`sfs[0]`).
+ *    This is used to adjust scaling if needed.
+ * 3. Iteratively generate scenarios for `nb_breakpoints` from 0 to `changes`:
+ *    - Use `generate_brk_combinations` to compute the best solution for each number of breakpoints.
+ * 4. Return the array of solutions for all configurations.
+ */
 solution *find_scenario(int sfs_length, double **cumul_weight, double **sfs, int grid_size, int n_sample, int changes)
 {
+    // Calculate the proportion of sites in the training SFS relative to the total
     double const_ren = (sfs[0][0] + sfs[1][0]) / sfs[0][0];
-    if ((int)const_ren == 2)
+    if ((int)const_ren == 2) // If the value is exactly 2, set it to 1
         const_ren = 1.;
-    solution  * liste_solution = malloc(sizeof(solution) * (changes + 1));
+
+    // Allocate memory for storing solutions for all configurations of breakpoints
+    solution *liste_solution = malloc(sizeof(solution) * (changes + 1));
+
+    // Iterate through the number of breakpoints from 0 to `changes`
     int nb_breakpoints = 0;
     while (nb_breakpoints <= changes)
     {
+        // Generate the best solution for the current number of breakpoints
         liste_solution[nb_breakpoints] = generate_brk_combinations(nb_breakpoints, sfs_length, cumul_weight, sfs, grid_size, n_sample);
         nb_breakpoints++;
     }
-    //clear_solution(sol_p1);
+
+    // Return the list of solutions
     return liste_solution;
 }
+
 
 void copy_and_insert_in_sorted_array(int *breakpoints, int nb_breakpoint, int new_breakpoint, int *new_breakpoints)
 {
@@ -671,12 +761,28 @@ double *test_split(double *sfs, int size, int frac)
     return sfs_test;
 }
 
-void fold_sfs(double **sfs, double **cumulatve_weight, int sfs_length, int grid_size)
+/**
+ * Modifies the system for analyses when the SFS is folded. This occurs when alleles are not oriented.
+ * The folding process combines the first half of the SFS with the second half and adjusts the cumulative weights accordingly.
+ *
+ * @param sfs               Pointer to a 2D array where:
+ *                           - sfs[0] is the observed Site Frequency Spectrum (SFS).
+ * @param cumulative_weight Pointer to a 2D array of cumulative weights used in regression.
+ * @param sfs_length        Length of the SFS, representing the number of observations.
+ * @param grid_size         Size of the grid for cumulative weights.
+ *
+ * This function folds the SFS by adding the second half of the SFS to the first half and adjusting the cumulative weights
+ * accordingly to account for the absence of allele orientation.
+ */
+void fold_sfs(double **sfs, double **cumulative_weight, int sfs_length, int grid_size)
 {
     for (int i = 0; i < sfs_length / 2; i++)
     {
+        // Combine the corresponding elements from the first and second halves of the SFS
         sfs[0][i] += sfs[0][sfs_length - 1 - i];
+
+        // Adjust cumulative weights accordingly
         for (int j = 0; j < grid_size + 2; j++)
-            cumulatve_weight[i][j] += cumulatve_weight[sfs_length - 1 - i][j];
+            cumulative_weight[i][j] += cumulative_weight[sfs_length - 1 - i][j];
     }
 }
