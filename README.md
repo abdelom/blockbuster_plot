@@ -34,13 +34,13 @@ To create the environment, download or copy the `environment.yml` file, and run:
 
 conda env create -f environment.yml
 
-This will create a Conda environment called `past_finder_env` with all the necessary dependencies installed.
+This will create a Conda environment called `blockbuster_env` with all the necessary dependencies installed.
 
 2. Activate the Conda Environment
 
 After the environment is created, activate it with:
 
-conda activate past_finder_env
+conda activate blockbuster_env
 
 3. Build the C Program
 

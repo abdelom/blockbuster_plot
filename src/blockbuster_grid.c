@@ -232,6 +232,8 @@ void weigth_grid_i(double **weight_grid, long double *wik, int col, int n_sample
     free(vkj);
 }
 
+
+
 /**
  * Computes the cumulative branch lengths for a given set of sample sizes and time intervals
  * based on either a logarithmic or linear scale for time.
@@ -255,14 +257,9 @@ void weigth_grid_i(double **weight_grid, long double *wik, int col, int n_sample
  *     // Use `weights` here
  *     free(weights);  // Free the allocated memory when done
  */
-double **cumulatve_weight_v2(int n_sample, int grid_size, double upper_bound, double lower_bound, char *file_name, int log)
+double **cumulatve_weight_v2(int n_sample, int grid_size, double *H)
 {
-    // Generate the time scale (either logarithmic or linear based on the `log` flag)
-    double *H;
-    if (log)
-        H = generate_logarithmic_scale(grid_size, upper_bound, lower_bound, file_name); // Logarithmic scale
-    else
-        H = generate_linear_scale(grid_size, upper_bound, lower_bound, file_name); // Linear scale
+
 
     // See kimmel and polanski 2003
     long double *wik = Wik(n_sample); 

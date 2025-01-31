@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "past_finder.h": "c"
+        "past_finder.h": "c",
+        "array": "c",
+        "string": "c",
+        "string_view": "c"
     }
 }

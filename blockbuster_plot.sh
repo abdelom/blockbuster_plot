@@ -19,6 +19,7 @@ function usage {
     echo "  -u, --upper_bound <value>      Upper bound for the time grid in Ne(0) generations (default: 1)."
     echo "  -l, --lower_bound <value>      Lower bound for the time grid in Ne(0) generations (default: 1e-4)."
     echo "  -c, --changes <value>          Maximum number of population size changes for which the search is exhaustive. For values between c and 10, a heuristic is applied (default: 5)."
+    echo "  -n, --grid_size <value>        Number of time point between lower bound and upper bound within the grid time(default: 35)."
     echo "      --help                     Display this help message and exit."
     echo
     echo "Example usage:"
@@ -92,7 +93,7 @@ echo "Generation time: $GENERATION_TIME"
 echo "Upper bound: $UPPER_BOUND"
 echo "Lower bound: $LOWER_BOUND"
 echo "Number of changes: $CHANGES"
-echo "Number of changes: $GRID_SIZE"
+echo "Number of time points: $GRID_SIZE"
 
 # Measure execution time for C program
 echo "Running C program..."

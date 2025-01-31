@@ -267,7 +267,9 @@ int main(int argc, char *argv[])
     if (args.recent > 0)
         args.lower_bound = 1. / (double)(args.recent * n_sample);
     char *outfile = construct_output_filepath(args.prefixe, "scenarios.txt");
-    double **cumul_weight = cumulatve_weight_v2(n_sample, args.grid_size, args.upper_bound, args.lower_bound, outfile, 1);
+        // Generate the time scale (either logarithmic or linear based on the `log` flag)
+    double * H = generate_logarithmic_scale(args.grid_size, args.upper_bound, args.lower_bound, outfile); // Logarithmic scale
+    double **cumul_weight = cumulatve_weight_v2(n_sample, args.grid_size, H);
 
     if (!args.oriented)
     {
