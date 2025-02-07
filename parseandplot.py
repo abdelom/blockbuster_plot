@@ -58,7 +58,7 @@ def parse_arguments():
     # Nouvel argument pour le facteur z pour la droite affine
     parser.add_argument("-z", "--z_factor", type=float, default=None, help="Factor for affine line (default: None)")
     parser.add_argument("-t", "--present_theta", type=float, default=None, help="theta in the present")
-    
+    parser.add_argument("-p", '--plot', action='store_false', help="outplot")
     args = parser.parse_args()
     
     # Vérifier si le fichier d'entrée existe
@@ -624,12 +624,18 @@ def main():
     else:
         z_factor = None
 
+    if args.plot:
     # Tracer les scénarios démographiques avec les courbes constantes par morceaux (si fournies)
-    plot_demographic_scenarios3(
-        scenarios, time_scale, args.output, 
-        args.mutation_rate, args.genome_length, args.generation_time, 
-        piecewise_data=piecewise_data, z=z_factor, theta = args.present_theta
-    )
+        plot_demographic_scenarios3(
+            scenarios, time_scale, args.output, 
+            args.mutation_rate, args.genome_length, args.generation_time, 
+            piecewise_data=piecewise_data, z=z_factor, theta = args.present_theta
+        )
+        plot_diagnostics(scenarios, args.output)
+
+        # # Generate individual plots
+        plot_log_likelihood_vs_breakpoints(scenarios, os.path.join(args.output, "log_likelihood_plot.png"))
+        plot_aic_vs_breakpoints(scenarios, os.path.join(args.output, "aic_plot.png"))
     
     # Écriture des scénarios mis à jour dans un fichier de sortie
     parsed_output_file = os.path.join(args.output, "parsed_output.txt")
@@ -637,11 +643,6 @@ def main():
         parsed_output_file, time_scale, scenarios, 
         args.mutation_rate, args.genome_length, args.generation_time
     )
-    plot_diagnostics(scenarios, args.output)
-
-    # # Generate individual plots
-    plot_log_likelihood_vs_breakpoints(scenarios, os.path.join(args.output, "log_likelihood_plot.png"))
-    plot_aic_vs_breakpoints(scenarios, os.path.join(args.output, "aic_plot.png"))
 
 
 
