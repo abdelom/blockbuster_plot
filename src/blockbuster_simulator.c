@@ -46,6 +46,7 @@ typedef struct
     double *parameters;
     int n_parameters;
     int noised;
+    int header;
 } Args;
 
 void init_sfs_from_args(int argc, char *argv[], Args *args)
@@ -58,6 +59,7 @@ void init_sfs_from_args(int argc, char *argv[], Args *args)
     args->n_parameters = 0;
     args->noised = 1;
     args->parameters = NULL;
+    args->header = 0;
     args->outfile[0] = '\0'; // Initialize outfile to an empty string
 
     static struct option long_options[] = {
@@ -68,9 +70,10 @@ void init_sfs_from_args(int argc, char *argv[], Args *args)
         {"outputfile", required_argument, 0, 'o'},
         {"parameters", required_argument, 0, 'p'},
         {"noised", required_argument, 0, 'e'},
+        {"header", no_argument, 0, 'H'},
         {0, 0, 0, 0}};
 
-    while ((opt = getopt_long(argc, argv, "n:t:f:o:p:r:e:", long_options, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "n:t:f:o:p:r:e:H", long_options, NULL)) != -1)
     {
         switch (opt)
         {
@@ -105,6 +108,9 @@ void init_sfs_from_args(int argc, char *argv[], Args *args)
                 args->parameters[args->n_parameters++] = atof(param);
                 param = strtok(NULL, ",");
             }
+            break;
+        case 'H':
+            args->header = 1;
             break;
         default:
             print_usage(argv[0], stderr);
@@ -203,6 +209,84 @@ double *sfs_infinite(Args args, double **cumulated_branch_lengthes)
     return sfs;
 }
 
+<<<<<<< Updated upstream
+=======
+double *folded_sfs(double *sim_sfs, int sfs_length)
+{
+    /*
+     * Function: folded_sfs
+     * ------------------------------------------
+     * Folds the simulated SFS data. sfs[i] <- sfs[i] + sfs[n-i] exept if n-i = i
+     *
+     * Inputs:
+     *      sim_sfs : Simulated SFS data.
+     *      observed_sfs : Observed SFS data.
+     *
+     * Output:
+     *      folded_sfs : Folded SFS data.
+     *
+     * Note: This function folds the simulated SFS data to match the observed SFS data by summing corresponding bins.
+     */
+    double *unfolded = sim_sfs;                                  // Store pointer to unfolded SFS data
+    int last_bin = sfs_length / 2;                               // Calculate index of last bin
+    int resize = (sfs_length + 1) / 2 + (sfs_length + 1) % 2;    // Calculate size of resized SFS array
+    sim_sfs = malloc(sizeof(double) * resize);                   // Allocate memory for resized SFS array
+    for (int i = 0; i < (sfs_length + 1) / 2; i++)               // Loop over half of the bins
+        sim_sfs[i] = unfolded[i] + unfolded[sfs_length - 1 - i]; // Sum corresponding bins
+    if ((sfs_length + 1) % 2 == 0)                               // If number of samples is even
+        sim_sfs[last_bin] = sim_sfs[last_bin] / 2.;              // Halve the value of the last bin
+    free(unfolded);                                              // Free memory allocated for unfolded SFS data
+    return sim_sfs;                                              // Return folded SFS data
+}
+
+void write_sfs_to_file(double *sfs, Args args)
+{
+    //  if(args.oriented)
+    //     sfs = folded_sfs(sfs, args.n_samples - 1);
+    FILE *file = fopen(args.outfile, "w");
+    int replicate = args.noised;
+    if (!args.noised)
+        replicate = 1;
+    if (file == NULL)
+    {
+        fprintf(stderr, "Error: Unable to open output file.\n");
+        exit(1);
+    }
+    if(args.header)
+    {
+        fprintf(file, "> sample_size: %d theta: %f parameters:", args.n_samples, args.theta);
+        for (int i = 0; i < args.n_parameters; i++)
+            fprintf(file, "%f ", args.parameters[i]);
+        fprintf(file, "\n");
+    }
+    for (size_t i = 0; i < replicate; i++)
+    {
+        for (int i = 0; i < args.n_samples - 1; i++)
+            if (args.oriented)
+            {
+                if (args.noised)
+                    fprintf(file, "%.0f ", generate_normal_random(sfs[i], sfs[i])); // sfs.l_genome * sfs.sfs[i] * sfs.theta / 2; // Compute SNPs for each bin
+                else
+                    fprintf(file, "%.9f ", sfs[i]);
+            }
+            else
+            {
+                if (i < args.n_samples / 2)
+                {
+                    if (args.noised)
+                        fprintf(file, "%.0f ", generate_normal_random(sfs[i], sfs[i])); // sfs.l_genome * sfs.sfs[i] * sfs.theta / 2; // Compute SNPs for each bin
+                    else
+                        fprintf(file, "%.9f ", sfs[i]);
+                }
+                else
+                    fprintf(file, "%d ", 0);
+            }
+        fprintf(file, "\n ");
+    }
+    fclose(file);
+}
+
+>>>>>>> Stashed changes
 int main(int argc, char *argv[])
 {
     Args args;
