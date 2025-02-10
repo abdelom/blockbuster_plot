@@ -46,6 +46,7 @@ typedef struct
     double *parameters;
     int n_parameters;
     int noised;
+    int header;
 } Args;
 
 void init_sfs_from_args(int argc, char *argv[], Args *args)
@@ -58,6 +59,7 @@ void init_sfs_from_args(int argc, char *argv[], Args *args)
     args->n_parameters = 0;
     args->noised = 1;
     args->parameters = NULL;
+    args->header = 0;
     args->outfile[0] = '\0'; // Initialize outfile to an empty string
 
     static struct option long_options[] = {
@@ -68,9 +70,10 @@ void init_sfs_from_args(int argc, char *argv[], Args *args)
         {"outputfile", required_argument, 0, 'o'},
         {"parameters", required_argument, 0, 'p'},
         {"noised", required_argument, 0, 'e'},
+        {"header", no_argument, 0, 'H'},
         {0, 0, 0, 0}};
 
-    while ((opt = getopt_long(argc, argv, "n:t:f:o:p:r:e:", long_options, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "n:t:f:o:p:r:e:H", long_options, NULL)) != -1)
     {
         switch (opt)
         {
@@ -106,6 +109,9 @@ void init_sfs_from_args(int argc, char *argv[], Args *args)
                 param = strtok(NULL, ",");
             }
             break;
+        case 'H':
+            args->header = 1;
+            break;
         default:
             print_usage(argv[0], stderr);
             exit(EXIT_FAILURE);
@@ -126,6 +132,37 @@ void free_args(Args *args)
     {
         free(args->parameters);
     }
+}
+
+void write_sfs_to_file(double *sfs, int n_samples, int oriented, const char *outfile)
+{
+    FILE *file = fopen(outfile, "w");
+    if (file == NULL)
+    {
+        fprintf(stderr, "Error: Unable to open output file.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    for (int i = 0; i < n_samples - 1; i++)
+    {
+        if (oriented)
+        {
+            fprintf(file, "%.9f ", sfs[i]);
+        }
+        else
+        {
+            if (i < n_samples / 2)
+            {
+                fprintf(file, "%.9f ", sfs[i]);
+            }
+            else
+            {
+                fprintf(file, "%d ", 0);
+            }
+        }
+    }
+
+    fclose(file);
 }
 
 double *absolute_to_relative_times(double *parameters, int n_parameters)
@@ -149,6 +186,7 @@ double generate_normal_random(double mu, double sigma)
     return mu + z * sqrt(sigma);                                   // réalisation du variable aléatoire suivant une loie normale de paramètres mu et sigma
 }
 
+
 double *sfs_infinite(Args args, double **cumulated_branch_lengthes)
 {
 
@@ -164,11 +202,15 @@ double *sfs_infinite(Args args, double **cumulated_branch_lengthes)
             size = args.parameters[args.n_parameters / 2 + k];
         }
         sfs[i] = sfs[i] * args.theta;
+        if(args.noised)
+            sfs[i] = floor(generate_normal_random(sfs[i], sfs[i])); // sfs.l_genome * sfs.sfs[i] * sfs.theta / 2; // Compute SNPs for each bin
         printf("%f\n", sfs[i]);
     }
     return sfs;
 }
 
+<<<<<<< Updated upstream
+=======
 double *folded_sfs(double *sim_sfs, int sfs_length)
 {
     /*
@@ -210,10 +252,13 @@ void write_sfs_to_file(double *sfs, Args args)
         fprintf(stderr, "Error: Unable to open output file.\n");
         exit(1);
     }
-    fprintf(file, "> sample_size: %d theta: %f parameters:", args.n_samples, args.theta);
-    for (int i = 0; i < args.n_parameters; i++)
-        fprintf(file, "%f ", args.parameters[i]);
-    fprintf(file, "\n");
+    if(args.header)
+    {
+        fprintf(file, "> sample_size: %d theta: %f parameters:", args.n_samples, args.theta);
+        for (int i = 0; i < args.n_parameters; i++)
+            fprintf(file, "%f ", args.parameters[i]);
+        fprintf(file, "\n");
+    }
     for (size_t i = 0; i < replicate; i++)
     {
         for (int i = 0; i < args.n_samples - 1; i++)
@@ -241,6 +286,7 @@ void write_sfs_to_file(double *sfs, Args args)
     fclose(file);
 }
 
+>>>>>>> Stashed changes
 int main(int argc, char *argv[])
 {
     Args args;
@@ -268,12 +314,11 @@ int main(int argc, char *argv[])
     double *H = absolute_to_relative_times(args.parameters, args.n_parameters);
     double **weight_grid = cumulatve_weight_v2(args.n_samples, args.n_parameters / 2, H);
     double *sfs = sfs_infinite(args, weight_grid);
-    end = clock();                                           // Fin de la mesure du temps
+    end = clock(); // Fin de la mesure du temps
     elapsed_time = ((double)(end - start)) / CLOCKS_PER_SEC; // Conversion en secondes
-    write_sfs_to_file(sfs, args);
     printf("Temps d'exécution : %.10f secondes\n", elapsed_time);
-    // save_cumulated_weight(args.n_samples, args.n_parameters / 2 + 2, weight_grid, "grid.txt");
-    //  save_cumulated_weight(args.n_samples, args.n_parameters/2 + 1, branch_lengthes, "grid2.txt");
+    save_cumulated_weight(args.n_samples, args.n_parameters / 2 + 2, weight_grid, "grid.txt");
+    // save_cumulated_weight(args.n_samples, args.n_parameters/2 + 1, branch_lengthes, "grid2.txt");
     free_args(&args);
     free(sfs);
     return 0;
