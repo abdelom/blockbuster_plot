@@ -421,8 +421,10 @@ def plot_demographic_scenarios3(scenarios, time_scale, output_directory, mu=-1, 
         else:
             combined_data.append((times[0], thetas, f'Scenario {idx + 1}'))
         scenario.times = garder_doublons(times[0])
-        scenario.times_generations = garder_doublons(times[1])
-        scenario.times_years = garder_doublons(times[2])
+        if times[1]:
+            scenario.times_generations = garder_doublons(times[1])
+        if times[2]:
+            scenario.times_years = garder_doublons(times[2])
 
         # Get current subplot for A4 layout
         row, col = divmod(plot_idx, n_cols)
@@ -571,11 +573,14 @@ def plot_diagnostics(scenarios, output_directory):
 
 def write_scenario_output(output_file, time_scale, scenarios, mu, l, generation_time):
         
+    
     with open(output_file, 'w') as f:
         # Write the original time scale
         # Write each scenario with its converted expressions
         for i, scenario in enumerate(scenarios):
             # Write likelihood and distance
+            time, _ = convert_timeandtheta(time_scale, scenario)
+            scenario.times =garder_doublons(time)
             f.write(f"> {i + 1} blocks\n")
             f.write(f"lik : {scenario.likelihood} dist : {scenario.distance} aic : {scenario.aic}\n")
             

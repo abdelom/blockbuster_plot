@@ -134,37 +134,6 @@ void free_args(Args *args)
     }
 }
 
-void write_sfs_to_file(double *sfs, int n_samples, int oriented, const char *outfile)
-{
-    FILE *file = fopen(outfile, "w");
-    if (file == NULL)
-    {
-        fprintf(stderr, "Error: Unable to open output file.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    for (int i = 0; i < n_samples - 1; i++)
-    {
-        if (oriented)
-        {
-            fprintf(file, "%.9f ", sfs[i]);
-        }
-        else
-        {
-            if (i < n_samples / 2)
-            {
-                fprintf(file, "%.9f ", sfs[i]);
-            }
-            else
-            {
-                fprintf(file, "%d ", 0);
-            }
-        }
-    }
-
-    fclose(file);
-}
-
 double *absolute_to_relative_times(double *parameters, int n_parameters)
 {
     double *H = malloc(sizeof(double) * n_parameters / 2);
@@ -209,8 +178,7 @@ double *sfs_infinite(Args args, double **cumulated_branch_lengthes)
     return sfs;
 }
 
-<<<<<<< Updated upstream
-=======
+
 double *folded_sfs(double *sim_sfs, int sfs_length)
 {
     /*
@@ -286,7 +254,7 @@ void write_sfs_to_file(double *sfs, Args args)
     fclose(file);
 }
 
->>>>>>> Stashed changes
+
 int main(int argc, char *argv[])
 {
     Args args;
@@ -317,7 +285,7 @@ int main(int argc, char *argv[])
     end = clock(); // Fin de la mesure du temps
     elapsed_time = ((double)(end - start)) / CLOCKS_PER_SEC; // Conversion en secondes
     printf("Temps d'exécution : %.10f secondes\n", elapsed_time);
-    save_cumulated_weight(args.n_samples, args.n_parameters / 2 + 2, weight_grid, "grid.txt");
+     write_sfs_to_file(sfs, args);
     // save_cumulated_weight(args.n_samples, args.n_parameters/2 + 1, branch_lengthes, "grid2.txt");
     free_args(&args);
     free(sfs);
