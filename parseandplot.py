@@ -380,13 +380,14 @@ def plot_demographic_scenarios3(scenarios, time_scale, output_directory, mu=-1, 
     and save each individual plot as a separate PNG file. The first scenario is plotted in red.
     """
     # Create the main output directory and the "individual_plots" subdirectory
+    times1, times2 = [], []
     os.makedirs(output_directory, exist_ok=True)
     plots_directory = os.path.join(output_directory, "individual_plots")
     os.makedirs(plots_directory, exist_ok=True)
 
     # Prepare data for the combined plot if mu and l are provided
     combined_data = []  # Will store (times, Nes, label) for each scenario
-    times = [None, None, None]
+    times = [[], [], []]
     best = find_best_scenariol(scenarios)
     # A4 page configuration
     n_cols = 2  # Number of columns
@@ -405,8 +406,7 @@ def plot_demographic_scenarios3(scenarios, time_scale, output_directory, mu=-1, 
                 flag = 1
         if flag:
             continue
-
-        # Compute Ne if mu and l are provided
+        # Comp, time2 = [ute Ne if mu and l are provided
         if mu != -1 and l != -1:
             Nes = np.array(thetas) / (4 * mu * l)  # Effective population size
             times[1] = np.array(times[0]) * Nes[0]  # Times in Ne generations
@@ -421,9 +421,9 @@ def plot_demographic_scenarios3(scenarios, time_scale, output_directory, mu=-1, 
         else:
             combined_data.append((times[0], thetas, f'Scenario {idx + 1}'))
         scenario.times = garder_doublons(times[0])
-        if times[1]:
+        if len(times[1]) !=0:
             scenario.times_generations = garder_doublons(times[1])
-        if times[2]:
+        if len(times[2]) != 0:
             scenario.times_years = garder_doublons(times[2])
 
         # Get current subplot for A4 layout

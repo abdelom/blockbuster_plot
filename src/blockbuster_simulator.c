@@ -96,7 +96,7 @@ void init_sfs_from_args(int argc, char *argv[], Args *args)
             args->noised = atoi(optarg);
             break;
         case 'p':
-            args->parameters = malloc(100 * sizeof(double)); // Initial allocation
+            args->parameters = malloc(1000 * sizeof(double)); // Initial allocation
             if (!args->parameters)
             {
                 perror("Memory allocation failed for parameters");
@@ -173,7 +173,6 @@ double *sfs_infinite(Args args, double **cumulated_branch_lengthes)
         sfs[i] = sfs[i] * args.theta;
         if(args.noised)
             sfs[i] = floor(generate_normal_random(sfs[i], sfs[i])); // sfs.l_genome * sfs.sfs[i] * sfs.theta / 2; // Compute SNPs for each bin
-        printf("%f\n", sfs[i]);
     }
     return sfs;
 }
@@ -242,9 +241,9 @@ void write_sfs_to_file(double *sfs, Args args)
                 if (i < args.n_samples / 2)
                 {
                     if (args.noised)
-                        fprintf(file, "%.0f ", generate_normal_random(sfs[i], sfs[i])); // sfs.l_genome * sfs.sfs[i] * sfs.theta / 2; // Compute SNPs for each bin
+                        fprintf(file, "%.0f ", generate_normal_random(sfs[i], sfs[i]) + generate_normal_random(sfs[args.n_samples - 2 - i], sfs[args.n_samples - 2 - i])); // sfs.l_genome * sfs.sfs[i] * sfs.theta / 2; // Compute SNPs for each bin
                     else
-                        fprintf(file, "%.9f ", sfs[i]);
+                        fprintf(file, "%.9f ", sfs[i] + sfs[args.n_samples - 2 - i]);
                 }
                 else
                     fprintf(file, "%d ", 0);

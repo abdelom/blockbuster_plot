@@ -25,6 +25,8 @@ double *test_split(double *sfs, int size, int num_blocks);
  
 // Fonction pour plier le SFS si non orienté
 void fold_sfs(double **sfs, double **cumul_weight, int size, int grid_size);
+void sigleton_ignore(double **sfs, double **cumulative_weight, int grid_size);
+void singleton_erased(double **sfs, double **cumulative_weight, int sfs_length);
 
 // Fonction pour trouver le scénario
 solution* find_scenario(int size, double **cumul_weight, double **sfs, int grid_size, int n_sample, int changes);

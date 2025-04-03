@@ -7,6 +7,7 @@
 typedef struct
 {
     int oriented;
+    int singleton;
     int num_blocks;
     int changes;
     double recent;
@@ -90,10 +91,11 @@ int parse_args(int argc, char *argv[], Args *args)
     args->prefixe = NULL;
     args->sfs_file = NULL;
     args->upper_bound = 1.0;
-    args->lower_bound = 1e-4;
+    args->lower_bound = -1.0;
     args->changes = 5;
     args->recent = -1.;
     args->grid_size = 35;
+    args->singleton = 1;
 
     // Define long options
     static struct option long_options[] = {
@@ -107,12 +109,13 @@ int parse_args(int argc, char *argv[], Args *args)
         {"grid_size", required_argument, 0, 'n'},
         {"recent", required_argument, 0, 'r'},
         {"help", no_argument, 0, 'h'},
+        {"singleton", required_argument, 0, 'S'},
         {0, 0, 0, 0} // End of list
     };
 
     // Parse command-line arguments
     int opt;
-    while ((opt = getopt_long(argc, argv, "c:p:o:b:l:u:h:s:r:n:", long_options, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "c:p:o:b:l:u:h:s:r:n:S:", long_options, NULL)) != -1)
     {
         switch (opt)
         {
@@ -127,6 +130,9 @@ int parse_args(int argc, char *argv[], Args *args)
             break;
         case 'o':
             args->oriented = atoi(optarg);
+            break;
+        case 'S':
+            args->singleton = atoi(optarg);
             break;
         case 'r':
             args->recent = atof(optarg);
@@ -154,12 +160,12 @@ int parse_args(int argc, char *argv[], Args *args)
             break;
         case 'l':
             args->lower_bound = atof(optarg);
-            if (args->lower_bound <= 0)
-            {
-                fprintf(stderr, "Error: lower bound (-l or --lower-bound) must be positive.\n");
-                usage(argv[0]);
-                return 1;
-            }
+            // if (args->lower_bound <= 0)
+            // {
+            //     fprintf(stderr, "Error: lower bound (-l or --lower-bound) must be positive.\n");
+            //     usage(argv[0]);
+            //     return 1;
+            // }
             break;
         case 'h':
             usage(argv[0]);
@@ -264,19 +270,27 @@ int main(int argc, char *argv[])
     double **sfs = malloc(sizeof(double *) * 2);
     sfs[0] = readSFSFromFile(args.sfs_file, &size);
     int n_sample = size + 1; // n_sample doit être spécifié
+    //if (args.lower_bound < 0)
+    args.lower_bound = 1. / (10 * n_sample);
     if (args.recent > 0)
         args.lower_bound = 1. / (double)(args.recent * n_sample);
     char *outfile = construct_output_filepath(args.prefixe, "scenarios.txt");
-        // Generate the time scale (either logarithmic or linear based on the `log` flag)
-    double * H = generate_logarithmic_scale(args.grid_size, args.upper_bound, args.lower_bound, outfile); // Logarithmic scale
+    // Generate the time scale (either logarithmic or linear based on the `log` flag)
+    double *H = generate_logarithmic_scale(args.grid_size, args.upper_bound, args.lower_bound, outfile); // Logarithmic scale
     double **cumul_weight = cumulatve_weight_v2(n_sample, args.grid_size, H);
-
-    if (!args.oriented)
+    // if(!args.singleton)
+    //     sigleton_ignore(sfs, cumul_weight, args.grid_size);
+    if(!args.oriented)
     {
         fold_sfs(sfs, cumul_weight, size, args.grid_size);
         size = size / 2 + size % 2;
     }
-
+    // else{
+    //     if(!args.singleton){
+    //         singleton_erased(sfs, cumul_weight, size);
+    //         size -= 1;
+    //     }
+    // }
     sfs[1] = test_split(sfs[0], size, args.num_blocks);
     for (int i = 0; i < size; i++)
         printf("%f %f \n", sfs[0][i], sfs[1][i]);

@@ -40,16 +40,24 @@ LOWER_BOUND=1e-4
 GRID_SIZE=35
 CHANGES=5
 RECENT="-1"
+SING=1
 
 # Parse command-line arguments with getopt
-ARGS=$(getopt -o "s:p:o:b:L:m:g:u:l:c:h:r:n:" -l "sfs:,prefixe_directory:,oriented:,blocks:,genome_length:,mutation_rate:,generation_time:,upper_bound:,lower_bound:,changes:,grid_size:,help" -- "$@")
+ARGS=$(getopt -o "s:p:o:b:L:m:g:u:l:c:r:n:S:" \
+              -l "sfs:,prefixe_directory:,oriented:,blocks:,genome_length:,mutation_rate:,generation_time:,upper_bound:,lower_bound:,changes:,grid_size:,singleton:,help" \
+              -- "$@")
+
+# Gestion des erreurs de getopt
 if [ $? -ne 0 ]; then
+    echo "Error in parsing arguments." >&2
     usage
+    exit 1
 fi
 
 eval set -- "$ARGS"
 
-# Extract options and their arguments
+# Par défaut, SINGLETON est désactiv
+
 while true; do
     case "$1" in
         -s|--sfs) SFS_FILE="$2"; shift 2;;
@@ -64,25 +72,27 @@ while true; do
         -c|--changes) CHANGES="$2"; shift 2;;
         -r|--recent) RECENT="$2"; shift 2;;
         -n|--grid_size) GRID_SIZE="$2"; shift 2;;
-        --help) usage; shift;;
+        -S|--singleton) SING="$2"; shift 2;;  # ✅ Détection correcte
+        --help) usage; exit 0;;
         --) shift; break;;
-        *) usage; break;;
+        *) echo "Unknown option: $1" >&2; usage; exit 1;;
     esac
 done
 
-# Check for required arguments
+# Vérification des arguments obligatoires
 if [ -z "$SFS_FILE" ] || [ -z "$OUTPUT_DIR" ]; then
     echo "Error: The -s (SFS file) and -p (output_directory) arguments are required."
     usage
+    exit 1
 fi
 
-# Automatically set ORIENTED to 0 if the SFS file is folded
+# Automatisation du mode orienté
 if [[ "$SFS_FILE" == *"folded"* ]]; then
     ORIENTED=0
     echo "The SFS file is folded. The '-o' option is automatically set to 0."
 fi
 
-# Display the chosen options
+# Affichage des options choisies
 echo "SFS file: $SFS_FILE"
 echo "Output directory: $OUTPUT_DIR"
 echo "Oriented: $ORIENTED"
@@ -94,12 +104,14 @@ echo "Upper bound: $UPPER_BOUND"
 echo "Lower bound: $LOWER_BOUND"
 echo "Number of changes: $CHANGES"
 echo "Number of time points: $GRID_SIZE"
+echo "Singleton mode: $SING"
 
-# Measure execution time for C program
+# Exécution du programme C
 echo "Running C program..."
 START_TIME_C=$(date +%s)
-echo --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT" -n "$GRID_SIZE"
-./bin/blockbuster_main --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT" -n "$GRID_SIZE"
+echo $SINGLETON
+echo --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT" -n "$GRID_SIZE" -S "$SING"
+./bin/blockbuster_main --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT" -n "$GRID_SIZE" -S "$SING"
 
 if [ $? -ne 0 ]; then
     echo "Error: C program failed to execute. Exiting."
