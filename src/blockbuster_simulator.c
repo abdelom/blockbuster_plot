@@ -241,9 +241,19 @@ void write_sfs_to_file(double *sfs, Args args)
                 if (i < args.n_samples / 2)
                 {
                     if (args.noised)
-                        fprintf(file, "%.0f ", generate_normal_random(sfs[i], sfs[i]) + generate_normal_random(sfs[args.n_samples - 2 - i], sfs[args.n_samples - 2 - i])); // sfs.l_genome * sfs.sfs[i] * sfs.theta / 2; // Compute SNPs for each bin
+                    {
+                        if(args.n_samples%2 == 0 && i == args.n_samples / 2 - 1)
+                            fprintf(file, "%.0f ", generate_normal_random(sfs[i], sfs[i]));
+                        else
+                            fprintf(file, "%.0f ", generate_normal_random(sfs[i], sfs[i]) + generate_normal_random(sfs[args.n_samples - 2 - i], sfs[args.n_samples - 2 - i])); // sfs.l_genome * sfs.sfs[i] * sfs.theta / 2; // Compute SNPs for each bin      
+                    }
                     else
-                        fprintf(file, "%.9f ", sfs[i] + sfs[args.n_samples - 2 - i]);
+                    {
+                        if(args.n_samples%2 == 0 && i == args.n_samples / 2 - 1)
+                            fprintf(file, "%.9f ", sfs[i]);
+                        else
+                            fprintf(file, "%.9f ", sfs[i] + sfs[args.n_samples - 2 - i]);
+                    }
                 }
                 else
                     fprintf(file, "%d ", 0);
@@ -284,7 +294,7 @@ int main(int argc, char *argv[])
     end = clock(); // Fin de la mesure du temps
     elapsed_time = ((double)(end - start)) / CLOCKS_PER_SEC; // Conversion en secondes
     printf("Temps d'exécution : %.10f secondes\n", elapsed_time);
-     write_sfs_to_file(sfs, args);
+    write_sfs_to_file(sfs, args);
     // save_cumulated_weight(args.n_samples, args.n_parameters/2 + 1, branch_lengthes, "grid2.txt");
     free_args(&args);
     free(sfs);
