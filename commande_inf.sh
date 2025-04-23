@@ -105,9 +105,6 @@ python ../rapports/rapports.py --sfs_file ../SFS/SFS_Picus_viridis.fs --aic_plot
 
 python ../rapports/rapports.py --sfs_file ../SFS/SFS_Nipponia_nippon.fs --aic_plot ../inf5/Nipponia_nippon/aic_plot.png --likelihood_plot ../inf5/Nipponia_nippon/log_likelihood_plot.png --output ../rapports/Nipponia_nippon/
 
-
-
-
 # "bash blockbuster_plot.sh --sfs ../SFS/SFS_Coturnix_japonica.fs -p ../infbird/Coturnix_japonica/ -o 0 -c 6 -n 40 -b 3     -m 5.00E-09 -L 483720035 -g 1 "
 # "bash blockbuster_plot.sh --sfs ../SFS/SFS_Egretta_garzetta.fs -p ../infbird/Egretta_garzetta/ -o 0 -c 6 -n 40 -b 3     -m 5.00E-09 -L 491257580 -g 1 "
 # "bash blockbuster_plot.sh --sfs ../SFS/SFS_Eopsaltria_australis.fs -p ../infbird/Eopsaltria_australis/ -o 0 -c 6 -n 40 -b 3     -m 5.00E-09 -L 648764071 -g 6.3 "

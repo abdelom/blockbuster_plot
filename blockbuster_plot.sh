@@ -87,10 +87,10 @@ if [ -z "$SFS_FILE" ] || [ -z "$OUTPUT_DIR" ]; then
 fi
 
 # Automatisation du mode orienté
-if [[ "$SFS_FILE" == *"folded"* ]]; then
-    ORIENTED=0
-    echo "The SFS file is folded. The '-o' option is automatically set to 0."
-fi
+# if [[ "$SFS_FILE" == *"folded"* ]]; then
+#     ORIENTED=0
+#     echo "The SFS file is folded. The '-o' option is automatically set to 0."
+# fi
 
 # Affichage des options choisies
 echo "SFS file: $SFS_FILE"

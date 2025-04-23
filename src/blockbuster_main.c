@@ -270,8 +270,8 @@ int main(int argc, char *argv[])
     double **sfs = malloc(sizeof(double *) * 2);
     sfs[0] = readSFSFromFile(args.sfs_file, &size);
     int n_sample = size + 1; // n_sample doit être spécifié
-    //if (args.lower_bound < 0)
-    args.lower_bound = 1. / (10 * n_sample);
+    if (args.lower_bound < 0)
+        args.lower_bound = 1. / (10 * n_sample);
     if (args.recent > 0)
         args.lower_bound = 1. / (double)(args.recent * n_sample);
     char *outfile = construct_output_filepath(args.prefixe, "scenarios.txt");

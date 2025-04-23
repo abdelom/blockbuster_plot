@@ -326,8 +326,6 @@ void system_resolution(solution *sol, double **sfs, double **cumul_weight, int s
     free(sfs_theo);
     free(weight);
     free(regressors);
-
-    
 }
 
 /**

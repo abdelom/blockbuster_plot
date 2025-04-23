@@ -35,7 +35,8 @@ void save_solution(solution sol, int n_sample, char *out_file, double const_ren,
 
 // Fonction pour libérer la mémoire allouée pour l'intégrale des poids
 void free_integral_grid(double **cumul_weight, int n_sample);
-
+solution init_solution_size(int nb_breakpoints);
+void system_resolution(solution *sol, double **sfs, double **cumul_weight, int sfs_length);
 // Fonction pour libérer la mémoire allouée pour la solution
 void clear_solution(solution sol);
 

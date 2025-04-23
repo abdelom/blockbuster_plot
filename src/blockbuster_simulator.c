@@ -226,8 +226,9 @@ void write_sfs_to_file(double *sfs, Args args)
             fprintf(file, "%f ", args.parameters[i]);
         fprintf(file, "\n");
     }
-    for (size_t i = 0; i < replicate; i++)
+    for (size_t i = 0; i <= replicate; i++)
     {
+        if (replicate  == i) args.noised = 0;
         for (int i = 0; i < args.n_samples - 1; i++)
             if (args.oriented)
             {

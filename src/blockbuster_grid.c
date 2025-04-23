@@ -195,11 +195,11 @@ long double *Wik(int n_sample)
             tmp_k = (long double)((1 + k) * (3 + 2 * k) * (n_sample - k)) / (long double)(k * (2 * k - 1) * (n_sample + k + 1));
             tmp_kp1 = (long double)((3 + 2 * k) * (n_sample - 2 * i)) / (long double)(k * (n_sample + k + 1));
             W_i_k[(i - 1) * (n_sample - 1) + k] = -tmp_k * Wk + tmp_kp1 * Wkp1;
-            // if (W_i_k[(i - 1) * (n_sample - 1) + k] < 1e-7 && W_i_k[(i - 1) * (n_sample - 1) + k] > -1e-7)
-            // {
-            //     if (k % 2 == 0)
-            //         break;
-            // }
+        //     if (W_i_k[(i - 1) * (n_sample - 1) + k] < 1e-7 && W_i_k[(i - 1) * (n_sample - 1) + k] > -1e-7)
+        //     {
+        //         if (k % 2 == 0)
+        //             break;
+        //     }
         }
     }
     return W_i_k;
