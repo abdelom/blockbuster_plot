@@ -170,9 +170,7 @@ double *sfs_infinite(Args args, double **cumulated_branch_lengthes)
             sfs[i] += (size * (cumulated_branch_lengthes[i][k + 1] - cumulated_branch_lengthes[i][k]));
             size = args.parameters[args.n_parameters / 2 + k];
         }
-        sfs[i] = sfs[i] * args.theta;
-        if(args.noised)
-            sfs[i] = floor(generate_normal_random(sfs[i], sfs[i])); // sfs.l_genome * sfs.sfs[i] * sfs.theta / 2; // Compute SNPs for each bin
+        sfs[i] = sfs[i] * args.theta; // sfs.l_genome * sfs.sfs[i] * sfs.theta / 2; // Compute SNPs for each bin
     }
     return sfs;
 }
@@ -211,9 +209,7 @@ void write_sfs_to_file(double *sfs, Args args)
     //  if(args.oriented)
     //     sfs = folded_sfs(sfs, args.n_samples - 1);
     FILE *file = fopen(args.outfile, "w");
-    int replicate = args.noised;
-    if (!args.noised)
-        replicate = 1;
+    int replicate = args.noised + 1;
     if (file == NULL)
     {
         fprintf(stderr, "Error: Unable to open output file.\n");
@@ -226,9 +222,9 @@ void write_sfs_to_file(double *sfs, Args args)
             fprintf(file, "%f ", args.parameters[i]);
         fprintf(file, "\n");
     }
-    for (size_t i = 0; i <= replicate; i++)
+    for (size_t i = 0; i < replicate; i++)
     {
-        if (replicate  == i) args.noised = 0;
+        if(i == replicate - 1) args.noised = 0;
         for (int i = 0; i < args.n_samples - 1; i++)
             if (args.oriented)
             {

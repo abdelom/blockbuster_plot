@@ -19,6 +19,7 @@ typedef struct solution
     // double AIC;            // Akaike Information Criterion (AIC), a metric that could aid in model selection by balancing fit and model complexity
 } solution; 
 
+#define GRIDREFINE 1000
 
 // Fonction pour appliquer une opération de division sur le SFS
 double *test_split(double *sfs, int size, int num_blocks);

@@ -1,0 +1,12 @@
+> 1 blocks
+lik : -957270506.722718 dist : 4100248.906411 aic : 1914541013.445436
+Populational mutation rate (theta): 53357476.074647 Times of change in Ne generations:  
+> 2 blocks
+lik : -956974435.818453 dist : 335535.71501 aic : 1913948875.636906
+Populational mutation rate (theta): 1369914375.904722 49333649.902278 Times of change in Ne generations: 0.000100 
+> 3 blocks
+lik : -956965635.09549 dist : 15195.901408 aic : 1913931278.19098
+Populational mutation rate (theta): 89789356.374549 32266620.038509 49989576.638353 Times of change in Ne generations: 0.006969 0.011792 
+> 4 blocks
+lik : -956965633.734114 dist : 14083.567912 aic : 1913931279.468228
+Populational mutation rate (theta): 246401072.717189 79166223.581275 2691.905865 49987900.904487 Times of change in Ne generations: 0.000134 0.003448 0.003448 

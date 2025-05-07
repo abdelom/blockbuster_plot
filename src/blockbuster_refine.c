@@ -5,8 +5,9 @@
 #include <time.h>
 #include "blockbuster.h"
 #include "blockbuster_grid.h"
-
+#include <math.h>
 #include <ctype.h>
+#include <stdbool.h>
 
 typedef struct
 {
@@ -14,6 +15,24 @@ typedef struct
     char *filin;
     char *sfs_file;
 } Args;
+
+
+// Function to initialize a solution with a specified number of breakpoints
+solution init_solution_size_brk(int nb_breakpoints, int*brk, int grid_size)
+{
+    printf("%d aa\n", nb_breakpoints);
+    solution sol;
+    sol.nb_breakpoints = nb_breakpoints;
+    // Allocate memory for `nb_breakpoints + 1` to include initial and final states or boundaries, the last one corespond to the infinity
+    sol.breakpoints = realloc(brk, (nb_breakpoints + 2) * sizeof(int));
+    sol.thetas = calloc(sizeof(double), (nb_breakpoints + 1)); // Allocate space for each interval’s mutation rate
+    sol.se_thetas = NULL;
+    sol.residues = NULL;
+    sol.breakpoints = brk; // Initialize breakpoints as a simple sequence; this may be customized to represent actual change times
+    sol.breakpoints[nb_breakpoints] = grid_size + 1;
+    return sol;
+}
+
 
 int parse_args(int argc, char *argv[], Args *args)
 {
@@ -89,11 +108,11 @@ solution solution_from_times(double * times, double ** sfs, int n_sample, int or
         fold_sfs(sfs, cumul_weight, sfs_length, grid_size);
         sfs_length = sfs_length / 2 + sfs_length % 2;
     }
-   
     system_resolution(&sol, sfs, cumul_weight, sfs_length);
     end_time = clock();                                                // End time measurement
     cpu_time_used = ((double)(end_time - start_time)) / CLOCKS_PER_SEC; // Calculate the time in seconds
     printf("Time taken for system resolution: %f seconds\n", cpu_time_used); // Print the elapsed time
+    free_integral_grid(cumul_weight, n_sample);
     return sol;
 }
 
@@ -131,6 +150,79 @@ double *readSFSFromFile(const char *filename, int *size)
 }
 
 
+int commence_par_breakpoint(const char *ligne) {
+    return strncmp(ligne, " breakpoint", strlen(" breakpoint")) == 0;
+}
+
+int extraire_breakpoints(const char *ligne, int **breakpoints) {
+    const char *mot_cle = " breakpoints:";
+    char *position = strstr(ligne, mot_cle);
+    if (!position) {
+        *breakpoints = NULL;
+        return 0;
+    }
+
+    position += strlen(mot_cle); // Aller après "breakpoints:"
+    int *resultat = malloc(sizeof(int) * 100); // capacité initiale
+    int count = 0;
+
+    while (*position) {
+        while (*position && !isdigit(*position) && *position != '-') {
+            position++;
+        }
+        if (*position) {
+            int valeur;
+            if (sscanf(position, "%d", &valeur) == 1) {
+                resultat[count++] = valeur;
+            }
+            while (*position && (isdigit(*position) || *position == '-')) {
+                position++;
+            }
+        }
+    }
+
+    *breakpoints = realloc(resultat, count * sizeof(int)); // ajuster la taille
+    return count;
+}
+
+void parse_scenario(char * scenarios)
+{
+    FILE *file = fopen(scenarios, "r");
+
+    char line[100000]; // Taille maximale d'une ligne, ajustez selon vos besoins
+    double * time = malloc(sizeof(double));
+    int grid_size = 0, flag = 1;
+    solution sol;
+    while (fgets(line, sizeof(line), file)) {
+        // Traiter la ligne
+       
+        if(atof(line) == 0.) flag = 0;
+        if(flag)
+        {
+        time[grid_size] = (double)atof(line);
+        grid_size ++;
+        time = realloc(time, (grid_size + 1) * sizeof(double));
+    // printf("%lf \n", time[i - 1]);
+        }
+        else
+        {
+            if(commence_par_breakpoint(line))
+            {
+                int *breaks = NULL;
+                int nb_breakpoint = extraire_breakpoints(line, &breaks);
+                if(nb_breakpoint != 0)
+                {solution sol  = init_solution_size_brk(nb_breakpoint, breaks, grid_size);
+                clear_solution(sol);}
+            }
+        }
+         
+    }
+    free(time);
+    // Fermer le fichier
+    fclose(file);
+}
+
+
 // Programme principal
 int main(int argc, char * argv[]) {
     
@@ -152,6 +244,26 @@ int main(int argc, char * argv[]) {
     double cpu_time_used = ((double)(end_time - start_time)) / CLOCKS_PER_SEC; // Calculate the time in seconds
     printf("Time taken for system resolution: %f seconds\n", cpu_time_used); // Print the elapsed time
     printf("%s\n", args.filin);
+     clear_solution(sol);
+    parse_scenario("test/scenarios.txt");
+    // Lire le fichier ligne par ligne
 
+
+    const char *ligne = " breakpoints:  ";
+    int *breaks = NULL;
+    int nb = extraire_breakpoints(ligne, &breaks);
+
+    printf("Nombre d'entiers : %d\n", nb);
+    for (int i = 0; i < nb; ++i) {
+        printf("%d ", breaks[i]);
+    }
+    printf("\n");
+
+    free(breaks);
+    free(sfs[0]);
+    free(sfs[1]);
+    free(sfs);
+
+    return 0;
     return 0;
 }

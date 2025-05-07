@@ -238,12 +238,22 @@ char *construct_output_filepath(const char *prefix, const char *filename)
     return out_file;
 }
 
+
+
+void improve_solution(int * time_scale, solution sol, Args args, double ** sfs, int n_sample)
+{
+    int grid_size2 = args.grid_size  * GRIDREFINE;
+    double *H = generate_logarithmic_scale(grid_size2, args.upper_bound, args.lower_bound, "scenario.txt"); // Logarithmic scale
+    double **cumul_weight = cumulatve_weight_v2(n_sample, args.grid_size, H);
+}
+
+
 void save_list_solution(solution *list_solution, solution *list_solution2, int n_sample, int sfs_length, char *out_file, double **sfs, int changes)
 {
     double const_ren = (sfs[0][0] + sfs[1][0]) / sfs[0][0];
     if ((int)const_ren == 2)
         const_ren = 1.;
-    for (int i = 0; i < changes; i++)
+    for (int i = 0; i <= changes; i++)
     {
         if (list_solution2 == NULL)
             save_solution(list_solution[i], n_sample, out_file, const_ren, sfs_length);
@@ -276,8 +286,8 @@ int main(int argc, char *argv[])
         args.lower_bound = 1. / (double)(args.recent * n_sample);
     char *outfile = construct_output_filepath(args.prefixe, "scenarios.txt");
     // Generate the time scale (either logarithmic or linear based on the `log` flag)
-    double *H = generate_logarithmic_scale(args.grid_size, args.upper_bound, args.lower_bound, outfile); // Logarithmic scale
-    double **cumul_weight = cumulatve_weight_v2(n_sample, args.grid_size, H);
+    double *H = generate_logarithmic_scale(args.grid_size * GRIDREFINE , args.upper_bound, args.lower_bound, outfile); // Logarithmic scale
+    double **cumul_weight = cumulatve_weight_v2(n_sample, args.grid_size * GRIDREFINE, H);
     // if(!args.singleton)
     //     sigleton_ignore(sfs, cumul_weight, args.grid_size);
     if(!args.oriented)
@@ -311,5 +321,7 @@ int main(int argc, char *argv[])
     free(sfs[1]);
     free(sfs[0]);
     free(sfs);
+    free(outfile);
+    free(list_solution);
     return 0;
 }

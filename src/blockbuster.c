@@ -37,7 +37,7 @@ solution init_solution_size(int nb_breakpoints)
     sol.se_thetas = NULL;
     sol.residues = NULL;
     for (int i = 0; i < nb_breakpoints; i++)
-        sol.breakpoints[i] = i + 1; // Initialize breakpoints as a simple sequence; this may be customized to represent actual change times
+        sol.breakpoints[i] = i * GRIDREFINE + 1; // Initialize breakpoints as a simple sequence; this may be customized to represent actual change times
     return sol;
 }
 
@@ -326,6 +326,8 @@ void system_resolution(solution *sol, double **sfs, double **cumul_weight, int s
     free(sfs_theo);
     free(weight);
     free(regressors);
+
+    
 }
 
 /**
@@ -344,20 +346,20 @@ int recursive_bk_combination(int *brk, int nb_breakpoints, int grid_size)
     // Start with the last breakpoint in the array
     int i = nb_breakpoints - 1;
     // Attempt to increment the last breakpoint by 1
-    brk[i] += 1;
+    brk[i] += GRIDREFINE;
     // Adjust previous breakpoints if the current one exceeds allowable range
-    while (i >= 0 && brk[i] > grid_size + 1 - nb_breakpoints + i)
+    while (i >= 0 && brk[i] / GRIDREFINE > grid_size + 1 - nb_breakpoints + i)
     {
         // Move to the previous breakpoint in the array
         i--;
         // Increment the previous breakpoint
-        brk[i] += 1;
+        brk[i] += GRIDREFINE;
     }
     // For any indices after `i`, reset them to maintain increasing order
     for (int j = i + 1; j < nb_breakpoints; j++)
-        brk[j] = brk[j - 1] + 1;
+        brk[j] = brk[j - 1] + GRIDREFINE;
     // If the first breakpoint reaches its upper limit, all combinations have been generated
-    if (i == 0 && brk[0] == grid_size + 1 - nb_breakpoints)
+    if (i == 0 && brk[0] / GRIDREFINE == grid_size + 1 - nb_breakpoints)
         return 0;
     // Return 1 to indicate more combinations are available
     return 1;
@@ -550,7 +552,7 @@ solution generate_brk_combinations(int nb_breakpoints, int sfs_length, double **
     // Initialize the solution with specified number of breakpoints
     solution sol = init_solution_size(nb_breakpoints);
     // Set the last breakpoint to the grid limit (end boundary)
-    sol.breakpoints[nb_breakpoints] = grid_size + 1;
+    sol.breakpoints[nb_breakpoints] = GRIDREFINE * grid_size + 1;
     // Flag for stopping the combination generation
     int arret = 1;
     // Calculate the initial solution with the given breakpoints
@@ -578,6 +580,63 @@ solution generate_brk_combinations(int nb_breakpoints, int sfs_length, double **
     residues(&tmp_sol, cumul_weight, sfs_length, sfs[0]);
     // Return the best solution with the optimal breakpoint combination for a givent nulber of changes in population size
     return tmp_sol;
+}
+
+
+
+int check_new(solution sol, solution sol_initiale, int breakpoint)
+{
+    if(sol.breakpoints[breakpoint] > sol.breakpoints[breakpoint + 1] || sol.breakpoints[breakpoint] < sol.breakpoints[breakpoint - 1])
+        return 0;
+    return 1;
+}
+
+solution refine_solution_b(solution sol_initiale, int b, double **sfs, double **cumul_weight, int sfs_length, int sign)
+{
+    solution sol1 = copy_solution(sol_initiale);
+    solution solm = copy_solution(sol_initiale);
+    sol1.breakpoints[b]  += sign;
+    system_resolution(&sol1, sfs, cumul_weight, sfs_length);
+    
+    while(sol1.log_likelihood > solm.log_likelihood){
+        solm = copy_solution(sol1);
+        sol1.breakpoints[b]  += sign;
+        system_resolution(&sol1, sfs, cumul_weight, sfs_length);
+    }
+    clear_solution(sol1);
+    // clear_solution(sol2);
+    return solm; 
+}
+
+
+void refine_solution(solution * sol_initiale, double **sfs, double **cumul_weight, int sfs_length)
+{
+   
+
+    for(int i =0; i < 100; i ++)
+    {   
+        for(int b = sol_initiale->nb_breakpoints - 1; b >= 0; b --)
+        {
+            solution solp = refine_solution_b(*sol_initiale, b, sfs, cumul_weight, sfs_length, -1);
+            solution solm = refine_solution_b(*sol_initiale, b, sfs, cumul_weight, sfs_length, +1);
+            if(sol_initiale->log_likelihood < solm.log_likelihood)
+            {
+                clear_solution(*sol_initiale);
+                *sol_initiale = copy_solution(solm);
+            }
+            else{
+                if(sol_initiale-> log_likelihood < solp.log_likelihood)
+                {
+                    clear_solution(*sol_initiale);
+                    *sol_initiale = copy_solution(solp);
+                }
+            }
+            clear_solution(solp);
+            clear_solution(solm);
+        }
+    }
+    thetas_se(sol_initiale, sfs_length, cumul_weight);
+    residues(sol_initiale, cumul_weight, sfs_length, sfs[0]);
 }
 
 /**
@@ -620,6 +679,11 @@ solution *find_scenario(int sfs_length, double **cumul_weight, double **sfs, int
     {
         // Generate the best solution for the current number of breakpoints
         liste_solution[nb_breakpoints] = generate_brk_combinations(nb_breakpoints, sfs_length, cumul_weight, sfs, grid_size, n_sample);
+        if (nb_breakpoints >= 1)
+        {
+            refine_solution(&liste_solution[nb_breakpoints], sfs, cumul_weight, sfs_length);
+            // system_resolution(&liste_solution[nb_breakpoints], sfs, cumul_weight, sfs_length);
+        }
         nb_breakpoints++;
     }
 
@@ -831,6 +895,4 @@ void singleton_erased(double **sfs, double **cumulative_weight, int sfs_length)
         cumulative_weight[i] = cumulative_weight[i + 1];
     }
 }
-
-
 
