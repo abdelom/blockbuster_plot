@@ -246,7 +246,7 @@ def convert_scenario(scenario, mu, l, generation_time):
         
         # Times in generations scaled by Ne at present
         present_ne = scenario.effective_sizes[0]
-        scenario.times_generations = [time * present_ne for time in scenario.times]
+        scenario.times_generations = [20 * time * present_ne for time in scenario.times]
         
         # Times in years if generation_time is provided
         if generation_time > 0:
@@ -267,7 +267,7 @@ def garder_doublons(liste):
         i += 1
     return result
 
-def plot_individual_scenario(ax1, times, thetas, scenario_idx, Nes=None, piecewise_data=None, z=None, color="blue", theta=1e6):
+def plot_individual_scenario(ax1, times, thetas, scenario_idx, Nes=None, piecewise_data=None, z=None, color="blue", theta=2e7):
     """
     Plot the individual scenario: either Ne or Theta values with time.
     Adjust axis label sizes based on whether the plot is for a PDF or individual PNG.
@@ -288,14 +288,14 @@ def plot_individual_scenario(ax1, times, thetas, scenario_idx, Nes=None, piecewi
     tick_fontsize = 10 
     if Nes is not None:  # If Ne is calculated, plot it
         if times[2] is not None:  # If time is in years
-            ax1.plot(times[2], Nes, marker='o', label=f'Scenario {scenario_idx + 1} (years)', color=color)
+            ax1.plot(times[2], Nes, label=f'Scenario {scenario_idx + 1} (years)', color=color)
             ax1.set_xlabel('Time (years)', fontsize=label_fontsize, fontweight='bold')
         else:  # If time is in Ne generations
-            ax1.plot(times[1], Nes, marker='o', color=color)
+            ax1.plot(times[1], Nes, color=color)
             ax1.set_xlabel('Time (number of generations)', fontsize=label_fontsize, fontweight='bold')
         ax1.set_ylabel('Effective Population \n Size (Ne)', fontsize=label_fontsize, fontweight='bold')
     else:  # If Ne is not calculated, plot Theta
-        ax1.plot(times[0], thetas, marker='o', label=f'Scenario {scenario_idx + 1}', color=color)
+        ax1.plot(times[0], thetas, label=f'Scenario {scenario_idx + 1}', color=color)
         ax1.set_xlabel('Time (Ne generations)', fontsize=label_fontsize, fontweight='bold')
         ax1.set_ylabel('Population Mutation \n Rate (Theta)', fontsize=label_fontsize, fontweight='bold')
 
@@ -318,20 +318,27 @@ def plot_individual_scenario(ax1, times, thetas, scenario_idx, Nes=None, piecewi
 
 def plot_piecewise(ax1, piecewise_data, theta):
     """
-    Plot the piecewise constant curve (horizontal and vertical lines).
+    Plot the piecewise constant curve (horizontal and vertical lines)
+    using only ax.plot instead of hlines and vlines.
     """
     n = len(piecewise_data) // 2
     times_piecewise = [0] + piecewise_data[:n] + [piecewise_data[:n][-1] + 1]
     sizes_piecewise = [1] + piecewise_data[n:]
 
-    # Scale the constant sizes by Ne[0] or thetas[0]
-    sizes_scaled = [size * theta for size in sizes_piecewise]
+    # Scale the sizes
+    sizes_scaled = [s * theta for s in sizes_piecewise]
+
     for i in range(len(sizes_scaled)):
-        # Horizontal lines in black
-        ax1.hlines(sizes_scaled[i], times_piecewise[i], times_piecewise[i + 1], colors='black', label="Inferred" if i == 0 else "")
+        # Horizontal segment
+        x_horiz = [times_piecewise[i], times_piecewise[i + 1]]
+        y_horiz = [sizes_scaled[i], sizes_scaled[i]]
+        ax1.plot(x_horiz, y_horiz, color='black', label="Inferred" if i == 0 else "")
+
         if i < len(sizes_scaled) - 1:
-            # Vertical lines in black (not dashed)
-            ax1.vlines(times_piecewise[i + 1], sizes_scaled[i], sizes_scaled[i + 1], colors='black')
+            # Vertical segment
+            x_vert = [times_piecewise[i + 1], times_piecewise[i + 1]]
+            y_vert = [sizes_scaled[i], sizes_scaled[i + 1]]
+            ax1.plot(x_vert, y_vert, color='black')
 
 
 def plot_affine_function(ax1, times, theta, z):
@@ -401,15 +408,16 @@ def plot_demographic_scenarios3(scenarios, time_scale, output_directory, mu=-1, 
         # Convert times and thetas for the scenario
         times[0], thetas = convert_timeandtheta(time_scale, scenario)
         flag = 0
-        for theta in scenario.theta:
-            if theta < 0:
+
+        for thetat in scenario.theta:
+            if thetat < 0:
                 flag = 1
         if flag:
             continue
         # Comp, time2 = [ute Ne if mu and l are provided
         if mu != -1 and l != -1:
             Nes = np.array(thetas) / (4 * mu * l)  # Effective population size
-            times[1] = np.array(times[0]) * Nes[0]  # Times in Ne generations
+            times[1] = np.array(times[0]) * Nes[0] *2 # Times in Ne generations
             if g != -1:
                 times[2] = times[1] * g  # Times in years
         else:
@@ -571,9 +579,12 @@ def plot_diagnostics(scenarios, output_directory):
     print(f"Tous les diagnostics ont été sauvegardés dans le dossier : {diagnostics_dir}")
 
 
+def deme_format(line):
+    print(line)
+
+
+
 def write_scenario_output(output_file, time_scale, scenarios, mu, l, generation_time):
-        
-    
     with open(output_file, 'w') as f:
         # Write the original time scale
         # Write each scenario with its converted expressions
@@ -599,6 +610,12 @@ def write_scenario_output(output_file, time_scale, scenarios, mu, l, generation_
                     #f.write(" ".join(map(str, scenario.breakpoints)) + " ")
                     f.write("Effective size (Ne): " + " ".join(f"{ne:.6f}" for ne in scenario.effective_sizes) + " ")
                     f.write("Times of change in years: " + " ".join(f"{time_year:.6f}" for time_year in scenario.times_years) + "\n")
+            if mu < 0:
+                deme_format("Populational mutation rate (theta): " + " ".join(f"{theta:.6f}" for theta in scenario.theta) + " ")
+            elif mu > 0 and l > 0:
+                deme_format("Effective size (Ne): " + " ".join(f"{ne:.6f}" for ne in scenario.effective_sizes) + " ")
+            else:
+                deme_format("Effective size (Ne): " + " ".join(f"{ne:.6f}" for ne in scenario.effective_sizes) + " ")
 
 def main():
     # Parsing des arguments
@@ -628,7 +645,7 @@ def main():
         print(f"Affine line factor z: {z_factor}")
     else:
         z_factor = None
-
+    print(args.present_theta)
     if args.plot:
     # Tracer les scénarios démographiques avec les courbes constantes par morceaux (si fournies)
         plot_demographic_scenarios3(

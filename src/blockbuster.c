@@ -567,7 +567,7 @@ solution generate_brk_combinations(int nb_breakpoints, int sfs_length, double **
         // Calculate the solution (log-likelihood and distance) for the new combination
         system_resolution(&sol, sfs, cumul_weight, sfs_length);
         // If the new solution has a higher log-likelihood and all theta values are positive, keep its
-        if (isnan(tmp_sol.log_likelihood) || sol.log_likelihood > tmp_sol.log_likelihood) // || (all_positive(sol.thetas, sol.nb_breakpoints) && !all_positive(tmp_sol.thetas, sol.nb_breakpoints))) //
+        if (isnan(tmp_sol.log_likelihood) || sol.log_likelihood > tmp_sol.log_likelihood)// || (all_positive(sol.thetas, sol.nb_breakpoints))) //&& !all_positive(tmp_sol.thetas, sol.nb_breakpoints))) //
         {
             //if (!all_positive(sol.thetas, sol.nb_breakpoints) && all_positive(tmp_sol.thetas, sol.nb_breakpoints))
                 //continue;
@@ -684,6 +684,7 @@ solution *find_scenario(int sfs_length, double **cumul_weight, double **sfs, int
             refine_solution(&liste_solution[nb_breakpoints], sfs, cumul_weight, sfs_length);
             // system_resolution(&liste_solution[nb_breakpoints], sfs, cumul_weight, sfs_length);
         }
+        printf("%d ", nb_breakpoints);
         nb_breakpoints++;
     }
 
@@ -847,6 +848,7 @@ void fold_sfs(double **sfs, double **cumulative_weight, int sfs_length, int grid
         for (int j = 0; j < grid_size + 2; j++)
             cumulative_weight[i][j] += cumulative_weight[sfs_length - 1 - i][j];
     }
+    cumulative_weight = realloc(cumulative_weight, sfs_length/2 + sfs_length%2);
 }
 
 
@@ -885,14 +887,18 @@ void sigleton_ignore(double **sfs, double **cumulative_weight, int grid_size)
  * This function folds the SFS by adding the second half of the SFS to the first half and adjusting the cumulative weights
  * accordingly to account for the absence of allele orientation.
  */
-void singleton_erased(double **sfs, double **cumulative_weight, int sfs_length)
+void singleton_erased(double **sfs, double **cumulative_weight, int sfs_length, int grid_size)
 {
     for (int i = 0; i < sfs_length - 1; i++)
     {
         // Combine the corresponding elements from the first and second halves of the SFS
         sfs[0][i] = sfs[0][i + 1];
         // Adjust cumulative weights accordingly
-        cumulative_weight[i] = cumulative_weight[i + 1];
+        for (int j = 0; j < grid_size + 2; j++)
+            cumulative_weight[i][j] = cumulative_weight[i + 1][j];
     }
+    cumulative_weight = realloc(cumulative_weight, sfs_length - 1);
+    sfs[0] = realloc(sfs[0], sfs_length - 1);
+    sfs[1] = realloc(sfs[1], sfs_length - 1);
 }
 

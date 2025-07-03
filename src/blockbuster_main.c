@@ -270,7 +270,7 @@ int main(int argc, char *argv[])
 {
     // Structure pour stocker les arguments
     Args args;
-
+    srand(time(0));
     // Appel de la fonction de parsing des arguments
     if (parse_args(argc, argv, &args) != 0)
         return 1; // Erreur dans le parsing
@@ -289,18 +289,17 @@ int main(int argc, char *argv[])
     double *H = generate_logarithmic_scale(args.grid_size * GRIDREFINE , args.upper_bound, args.lower_bound, outfile); // Logarithmic scale
     double **cumul_weight = cumulatve_weight_v2(n_sample, args.grid_size * GRIDREFINE, H);
     // if(!args.singleton)
-    //     sigleton_ignore(sfs, cumul_weight, args.grid_size);
+    //     {sigleton_ignore(sfs, cumul_weight, args.grid_size * GRIDREFINE);}
     if(!args.oriented)
     {
-        fold_sfs(sfs, cumul_weight, size, args.grid_size);
+        fold_sfs(sfs, cumul_weight, size, args.grid_size * GRIDREFINE);
         size = size / 2 + size % 2;
     }
-    // else{
-    //     if(!args.singleton){
-    //         singleton_erased(sfs, cumul_weight, size);
-    //         size -= 1;
-    //     }
-    // }
+    if(!args.singleton)
+    {
+        singleton_erased(sfs, cumul_weight, size, args.grid_size * GRIDREFINE);
+        size -= 1;
+    }
     sfs[1] = test_split(sfs[0], size, args.num_blocks);
     for (int i = 0; i < size; i++)
         printf("%f %f \n", sfs[0][i], sfs[1][i]);

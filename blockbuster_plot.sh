@@ -125,6 +125,7 @@ echo "C program execution time: $EXEC_TIME_C seconds"
 # Measure execution time for Python program
 echo "Running Python program..."
 START_TIME_PYTHON=$(date +%s)
+echo -i "$OUTPUT_DIR/scenarios.txt" -o "$OUTPUT_DIR" -l "$GENOME_LENGTH" -m "$MUTATION_RATE" -g "$GENERATION_TIME"
 python3 parseandplot.py -i "$OUTPUT_DIR/scenarios.txt" -o "$OUTPUT_DIR" -l "$GENOME_LENGTH" -m "$MUTATION_RATE" -g "$GENERATION_TIME"
 
 if [ $? -ne 0 ]; then
