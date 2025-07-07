@@ -260,7 +260,7 @@ void save_list_solution(solution *list_solution, solution *list_solution2, int n
         else
         {
             save_solution(list_solution2[i], n_sample, out_file, const_ren, sfs_length);
-            // clear_solution(list_solution2[i]);
+            clear_solution(list_solution2[i]);
         }
         clear_solution(list_solution[i]);
     }
@@ -306,21 +306,22 @@ int main(int argc, char *argv[])
     clock_t start_time = clock(); // Start time measurement
 
     solution *list_solution = find_scenario(size, cumul_weight, sfs, args.grid_size, n_sample, args.changes);
-    solution *list_solution2;
-    if (args.recent > 0)
-        list_solution2 = recent_infrence(list_solution, args.changes, sfs, cumul_weight, size, n_sample);
-    else
-        list_solution2 = NULL;
+    // solution *list_solution2;
+    // if (args.recent > 0)
+    //     list_solution2 = recent_infrence(list_solution, args.changes, sfs, cumul_weight, size, n_sample);
+    // else
+    //     list_solution2 = NULL;
     clock_t end_time = clock();                                                // End time measurement
     double cpu_time_used = ((double)(end_time - start_time)) / CLOCKS_PER_SEC; // Calculate the time in seconds
 
-    save_list_solution(list_solution, list_solution2, n_sample, size, outfile, sfs, args.changes);
+    save_list_solution(list_solution, NULL, n_sample, size, outfile, sfs, args.changes);
     printf("Time taken for system resolution: %f seconds\n", cpu_time_used); // Print the elapsed time
     free_integral_grid(cumul_weight, n_sample);
     free(sfs[1]);
     free(sfs[0]);
     free(sfs);
     free(outfile);
+    // free(H);
     free(list_solution);
     return 0;
 }

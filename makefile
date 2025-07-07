@@ -28,7 +28,7 @@ CC = gcc
 CFLAGS = -g -fopenmp
 
 # Bibliothèques à lier
-LIBS = -lm -lmpfr -llapacke -lopenblas
+LIBS = -lm -llapacke -lopenblas
 
 # Règle par défaut (compilation des quatre exécutables)
 all: $(TARGET1) $(TARGET2) $(TARGET3) $(TARGET4)

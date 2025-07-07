@@ -427,14 +427,7 @@ void save_solution(solution sol, int n_sample, char *out_file, double const_ren,
 {
     // Ensure the directory exists before proceeding
     FILE *file = fopen(out_file, "a");
-    if (file == NULL)
-    {
-        perror("Error opening file");
-        free(out_file);
-        return;
-    }
-
-    // Write solution data to file
+   
     fprintf(file, " >\n log_likelihood: %f ", sol.log_likelihood);
     fprintf(file, "\n distance: %f ", sol.distance);
     fprintf(file, "\n breakpoints: ");
@@ -531,8 +524,6 @@ void residues(solution *sol, double **cumul_weight, int sfs_length, double *sfs)
     free(weight);
 }
 
-
-
 /**
  * Generates and evaluates all possible breakpoint combinations to find the optimal solution
  * with the highest log-likelihood, saving each intermediate solution and returning the best one.
@@ -576,13 +567,11 @@ solution generate_brk_combinations(int nb_breakpoints, int sfs_length, double **
         }
     }
     clear_solution(sol);
-    thetas_se(&tmp_sol, sfs_length, cumul_weight);
-    residues(&tmp_sol, cumul_weight, sfs_length, sfs[0]);
+    // thetas_se(&tmp_sol, sfs_length, cumul_weight);
+    // residues(&tmp_sol, cumul_weight, sfs_length, sfs[0]);
     // Return the best solution with the optimal breakpoint combination for a givent nulber of changes in population size
     return tmp_sol;
 }
-
-
 
 int check_new(solution sol, solution sol_initiale, int breakpoint)
 {
@@ -599,6 +588,7 @@ solution refine_solution_b(solution sol_initiale, int b, double **sfs, double **
     system_resolution(&sol1, sfs, cumul_weight, sfs_length);
     
     while(sol1.log_likelihood > solm.log_likelihood){
+        clear_solution(solm);
         solm = copy_solution(sol1);
         sol1.breakpoints[b]  += sign;
         system_resolution(&sol1, sfs, cumul_weight, sfs_length);
@@ -687,7 +677,8 @@ solution *find_scenario(int sfs_length, double **cumul_weight, double **sfs, int
         printf("%d ", nb_breakpoints);
         nb_breakpoints++;
     }
-
+    thetas_se(&liste_solution[0], sfs_length, cumul_weight);
+    residues(&liste_solution[0], cumul_weight, sfs_length, sfs[0]);
     // Return the list of solutions
     return liste_solution;
 }
@@ -772,6 +763,7 @@ void site_sampling(int n, int *tirages, int taille)
     }
     // Trier la liste des tirages
     qsort(tirages, taille, sizeof(int), comparer);
+    free(indices);
 }
 
 // Fonction pour calculer la somme cumulée des éléments de sfs
@@ -811,6 +803,8 @@ double *test_split(double *sfs, int size, int frac)
     {
         for (int i = 0; i < size; i++)
             sfs_test[i] = sfs[i];
+        free(tirages);
+        free(cumulated_sfs);
         return sfs_test;
     }
     site_sampling(n_sites, tirages, taille_tirages);
@@ -848,7 +842,7 @@ void fold_sfs(double **sfs, double **cumulative_weight, int sfs_length, int grid
         for (int j = 0; j < grid_size + 2; j++)
             cumulative_weight[i][j] += cumulative_weight[sfs_length - 1 - i][j];
     }
-    cumulative_weight = realloc(cumulative_weight, sfs_length/2 + sfs_length%2);
+    // cumulative_weight = realloc(cumulative_weight, sfs_length/2 + sfs_length%2);
 }
 
 
