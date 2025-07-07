@@ -287,7 +287,7 @@ def plot_individual_scenario(ax1, times, thetas, scenario_idx, Nes=None, piecewi
     label_fontsize = 12
     tick_fontsize = 10 
     if Nes is not None:  # If Ne is calculated, plot it
-        if times[2] is not None:  # If time is in years
+        if len(times[2]) > 0:  # If time is in years
             ax1.plot(times[2], Nes, label=f'Scenario {scenario_idx + 1} (years)', color=color)
             ax1.set_xlabel('Time (years)', fontsize=label_fontsize, fontweight='bold')
         else:  # If time is in Ne generations
@@ -348,38 +348,31 @@ def plot_affine_function(ax1, times, theta, z):
     affine_y = theta * z * np.array(times[0]) + theta
     ax1.plot(times[0], affine_y, label=f'Simulation', color='black')
 
-def create_combined_plot(combined_data, scenarios, output_directory, g=-1):
-    """
-    Create the combined plot with all the demographic scenarios.
-    Highlights the best scenario in red, and the others in dark gray.
-    """
-    fig, ax = plt.subplots(figsize=(12, 8))
-    ax.set_xscale('log')
-    ax.set_yscale('log')
 
-    # Find the best scenario using its AIC
-    best = find_best_scenariol(scenarios)
-
-    # Plot all scenarios with color distinction for the best one
-    for index, (times, Nes, label) in enumerate(combined_data):
-        if best == index:
-            ax.plot(times, Nes, marker='o', color="red", label=label, zorder = 2)
-        else:
-            ax.plot(times, Nes, marker='o', color="darkgrey", label=label, zorder=1)
-
-    ax.set_xlabel('Time (years)' if g != -1 else 'Time (Ne generations)', fontsize=20, fontweight='bold')
-    ax.set_ylabel('Effective Population Size (Ne)', fontsize=20, fontweight='bold')
-    ax.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
-    ax.tick_params(axis='x', labelsize=15)
-    ax.tick_params(axis='y', labelsize=15)
-
-    # Save the combined plot
-    combined_file = os.path.join(output_directory, 'combined_plot.png')
-    plt.tight_layout()
-    plt.savefig(combined_file, dpi = 300)
-    plt.close()
-
-    print(f"The combined plot has been saved in the file: {combined_file}")
+def deme_format(scenario, output):
+    times = scenario.times
+    sizes = scenario.theta
+    unit = "Ne generations"
+    if len(scenario.times_generations) > 0:
+        times = scenario.times_generations
+        sizes = scenario.effective_sizes
+        unit = "generations"
+    if len(scenario.times_years) > 0:
+        times = scenario.times_generations
+        unit = "years"
+    with open(output, 'w') as f:
+        f.write(f"time_units: {unit}\n")
+        f.write(f"demes:\n")
+        f.write(f"  - name: B\n")
+        f.write(f"    start_time: .inf\n")
+        f.write(f"    epochs:\n")
+        i = len(sizes) - 1
+        for times in times[::-1]: 
+            f.write(f"      - start_size: {sizes[i]}\n")
+            f.write(f"        end_time: {times}\n")
+            i -= 1
+        f.write(f"      - start_size: {sizes[0]}\n")
+        f.write(f"        end_time: {0}\n")
 
 def plot_demographic_scenarios3(scenarios, time_scale, output_directory, mu=-1, l=-1, g=-1, piecewise_data=None, z=None, theta=1e6):
     """
@@ -422,7 +415,7 @@ def plot_demographic_scenarios3(scenarios, time_scale, output_directory, mu=-1, 
                 times[2] = times[1] * g  # Times in years
         else:
             Nes = None
-            times[1] = times[0]  # No conversion if mu and l are not provided
+            times[1] = []  # No conversion if mu and l are not provided
         # Add data to the combined plot if necessary
         if Nes is not None:
             combined_data.append((times[1] if g == -1 else times[2], Nes, f'Scenario {idx + 1}'))
@@ -497,11 +490,7 @@ def plot_demographic_scenarios3(scenarios, time_scale, output_directory, mu=-1, 
         plt.tight_layout()
         fig_a4.savefig(a4_output_file)
         plt.close(fig_a4)
-
-    # Create the combined plot if mu and l are provided
-    if combined_data:
-        create_combined_plot(combined_data, scenarios, output_directory, g)
-
+    deme_format(scenarios[best], output_directory + "/deme.yml")
     print(f"All individual plots have been saved in the directory: {plots_directory}")
 
 
@@ -579,11 +568,6 @@ def plot_diagnostics(scenarios, output_directory):
     print(f"Tous les diagnostics ont été sauvegardés dans le dossier : {diagnostics_dir}")
 
 
-def deme_format(line):
-    print(line)
-
-
-
 def write_scenario_output(output_file, time_scale, scenarios, mu, l, generation_time):
     with open(output_file, 'w') as f:
         # Write the original time scale
@@ -610,12 +594,8 @@ def write_scenario_output(output_file, time_scale, scenarios, mu, l, generation_
                     #f.write(" ".join(map(str, scenario.breakpoints)) + " ")
                     f.write("Effective size (Ne): " + " ".join(f"{ne:.6f}" for ne in scenario.effective_sizes) + " ")
                     f.write("Times of change in years: " + " ".join(f"{time_year:.6f}" for time_year in scenario.times_years) + "\n")
-            if mu < 0:
-                deme_format("Populational mutation rate (theta): " + " ".join(f"{theta:.6f}" for theta in scenario.theta) + " ")
-            elif mu > 0 and l > 0:
-                deme_format("Effective size (Ne): " + " ".join(f"{ne:.6f}" for ne in scenario.effective_sizes) + " ")
-            else:
-                deme_format("Effective size (Ne): " + " ".join(f"{ne:.6f}" for ne in scenario.effective_sizes) + " ")
+
+
 
 def main():
     # Parsing des arguments
@@ -665,7 +645,6 @@ def main():
         parsed_output_file, time_scale, scenarios, 
         args.mutation_rate, args.genome_length, args.generation_time
     )
-
 
 
 if __name__ == "__main__":
