@@ -11,10 +11,15 @@ dependencies:
   - seaborn
 
   # C Compiler and dependencies
+  # C Compiler and dependencies
   - gcc
   - make
-  - gmp
-  - openmp
+  - gmp             # GMP: required by MPFR
+  - lapacke         # LAPACKE: C interface to LAPACK
+  - openblas        # OpenBLAS: BLAS implementation (used by LAPACK)
+  - libblas         # For completeness (used with LAPACK)
+  - liblapack       # For completeness (used with LAPACK)
+  - libgfortran     # Needed by BLAS/LAPACK
 
   # Additional utilities
   - cmake
