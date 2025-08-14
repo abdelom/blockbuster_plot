@@ -286,7 +286,7 @@ void replace_negative_with_1(double *theta, size_t n)
     {
         if (theta[i] < 0) // Check if the current value is negative.
         {
-            theta[i] = 1.; // Replace the negative value with 1.
+            theta[i] = 5e8; // Replace the negative value with 1.
         }
     }
 }
@@ -844,6 +844,21 @@ void fold_sfs(double **sfs, double **cumulative_weight, int sfs_length, int grid
     }
     // cumulative_weight = realloc(cumulative_weight, sfs_length/2 + sfs_length%2);
 }
+
+// void sfs_troncation(double **sfs, double **cumulative_weight, int sfs_length, int grid_size)
+// {
+//     for (int i = 0; i < sfs_length / 2; i++)
+//     {
+//         // Combine the corresponding elements from the first and second halves of the SFS
+//         sfs[0][i] += sfs[0][sfs_length - 1 - i];
+
+//         // Adjust cumulative weights accordingly
+//         for (int j = 0; j < grid_size + 2; j++)
+//             cumulative_weight[i][j] += cumulative_weight[sfs_length - 1 - i][j];
+//     }
+//     // cumulative_weight = realloc(cumulative_weight, sfs_length/2 + sfs_length%2);
+// }
+
 
 
 /**

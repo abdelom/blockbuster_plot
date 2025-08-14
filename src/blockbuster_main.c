@@ -16,6 +16,9 @@ typedef struct
     double upper_bound;
     double lower_bound;
     int grid_size;
+    int troncation;
+    double *theta_flag;
+    int theta_flag_count;
 } Args;
 
 /**
@@ -96,10 +99,12 @@ int parse_args(int argc, char *argv[], Args *args)
     args->recent = -1.;
     args->grid_size = 35;
     args->singleton = 1;
+    args->troncation = 0;
 
     // Define long options
     static struct option long_options[] = {
         {"output_directory", required_argument, 0, 'p'},
+        {"troncation", required_argument, 0, 't'},
         {"changes", required_argument, 0, 'c'},
         {"sfs", required_argument, 0, 's'},
         {"oriented", required_argument, 0, 'o'},
@@ -115,7 +120,7 @@ int parse_args(int argc, char *argv[], Args *args)
 
     // Parse command-line arguments
     int opt;
-    while ((opt = getopt_long(argc, argv, "c:p:o:b:l:u:h:s:r:n:S:", long_options, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "c:p:o:b:l:u:h:s:r:n:S:t:", long_options, NULL)) != -1)
     {
         switch (opt)
         {
@@ -133,6 +138,9 @@ int parse_args(int argc, char *argv[], Args *args)
             break;
         case 'S':
             args->singleton = atoi(optarg);
+            break;
+        case 't':
+            args->troncation = atoi(optarg);
             break;
         case 'r':
             args->recent = atof(optarg);
@@ -300,6 +308,12 @@ int main(int argc, char *argv[])
         singleton_erased(sfs, cumul_weight, size, args.grid_size * GRIDREFINE);
         size -= 1;
     }
+     if(args.troncation && args.troncation < size && args.troncation > 5){
+        // sfs_troncation(sfs, cumul_weight, size, args.grid_size * GRIDREFINE, args.troncation);
+        size = args.troncation;
+        sfs[0] = realloc(sfs[0], size);
+     }
+        // Ksfs[1] = realloc(sfs[1], sfs_length - 1);
     sfs[1] = test_split(sfs[0], size, args.num_blocks);
     for (int i = 0; i < size; i++)
         printf("%f %f \n", sfs[0][i], sfs[1][i]);

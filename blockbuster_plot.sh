@@ -32,6 +32,7 @@ SFS_FILE=""
 OUTPUT_DIR=""
 ORIENTED=0
 NUM_BLOCKS=1
+TRONC=0
 GENOME_LENGTH=-1
 MUTATION_RATE=-1
 GENERATION_TIME=-1
@@ -43,8 +44,8 @@ RECENT="-1"
 SING=1
 
 # Parse command-line arguments with getopt
-ARGS=$(getopt -o "s:p:o:b:L:m:g:u:l:c:r:n:S:" \
-              -l "sfs:,prefixe_directory:,oriented:,blocks:,genome_length:,mutation_rate:,generation_time:,upper_bound:,lower_bound:,changes:,grid_size:,singleton:,help" \
+ARGS=$(getopt -o "s:p:o:b:L:m:g:u:l:c:r:n:S:t:" \
+              -l "sfs:,prefixe_directory:,oriented:,blocks:,genome_length:,mutation_rate:,generation_time:,upper_bound:,lower_bound:,changes:,grid_size:,singleton:troncation,help" \
               -- "$@")
 
 # Gestion des erreurs de getopt
@@ -70,6 +71,7 @@ while true; do
         -u|--upper_bound) UPPER_BOUND="$2"; shift 2;;
         -l|--lower_bound) LOWER_BOUND="$2"; shift 2;;
         -c|--changes) CHANGES="$2"; shift 2;;
+        -t|--troncation) TRONC="$2"; shift 2;;
         -r|--recent) RECENT="$2"; shift 2;;
         -n|--grid_size) GRID_SIZE="$2"; shift 2;;
         -S|--singleton) SING="$2"; shift 2;;  # ✅ Détection correcte
@@ -110,8 +112,8 @@ echo "Singleton mode: $SING"
 echo "Running C program..."
 START_TIME_C=$(date +%s)
 echo $SINGLETON
-echo --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT" -n "$GRID_SIZE" -S "$SING"
-./bin/blockbuster_main --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT" -n "$GRID_SIZE" -S "$SING"
+echo --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT" -n "$GRID_SIZE" -S "$SING" -t "$TRONC"
+./bin/blockbuster_main --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT" -n "$GRID_SIZE" -S "$SING" -t "$TRONC"
 
 if [ $? -ne 0 ]; then
     echo "Error: C program failed to execute. Exiting."
