@@ -4,13 +4,15 @@
 #include <math.h>
 #include <string.h>
 #include <unistd.h>
+#include "blockbuster_grid.h"
 
-void free_integral_grid(double **cjk_grid, int n_sample)
-{
-    for (int i = 0; i < n_sample - 1; i++)
-        free(cjk_grid[i]); // Free each sub-array
-    free(cjk_grid);        // Free the main array
-}
+
+// void free_integral_grid(double **cjk_grid, int n_sample)
+// {
+//     for (int i = 0; i < n_sample - 1; i++)
+//         free(cjk_grid[i]); // Free each sub-array
+//     free(cjk_grid);        // Free the main array
+// }
 
 void matrix_multiply(int n, int t, double *A, double **B, double **C)
 {
@@ -45,12 +47,13 @@ void matrix_multiply(int n, int t, double *A, double **B, double **C)
     }
 }
 
-long double *init_wik(int n_sample)
+
+long double *init_wik(int n_sample, int sfs_length)
 {
-    long double *W_i_k = calloc((n_sample - 1) * (n_sample - 1), sizeof(long double)); // Allocate memory for the array
+    long double *W_i_k = calloc((n_sample - 1) * sfs_length, sizeof(long double)); // Allocate memory for the array
     if (!W_i_k)                                                                        // Check for successful allocation
         exit(3);
-    for (int i = 1; i < n_sample; i++)
+    for (int i = 1; i <= sfs_length; i++)
     {
         W_i_k[(i - 1) * (n_sample - 1)] = 6. / (long double)(n_sample + 1);
         W_i_k[(i - 1) * (n_sample - 1) + 1] = 30. * (long double)(n_sample - 2 * i) / (long double)((n_sample + 1) * (n_sample + 2));
@@ -104,6 +107,7 @@ double* generate_logarithmic_scale(int grid_size, double upper_bound, double low
     return log_scale;
 }
 
+
 /**
  * Generates a list of numbers linearly spaced between two given bounds, writes them to a file,
  * and returns them in a dynamically allocated array.
@@ -147,7 +151,8 @@ double* generate_linear_scale(int grid_size, double upper_bound, double lower_bo
     return linear_scale;
 }
 
-void save_cumulated_weight(int n_sample, int grid_size, double **matrix, char *filename)
+
+void save_cumulated_weight(int sfs_length, int grid_size, double **matrix, char *filename)
 {
     /**
      * @brief Saves the cumulative weight matrix to a specified file.
@@ -166,8 +171,7 @@ void save_cumulated_weight(int n_sample, int grid_size, double **matrix, char *f
         printf("Erreur d'ouverture du fichier %s\n", filename); // Print an error message if not
         exit(1);                                                // Exit the program
     }
-
-    for (int i = 0; i < n_sample - 1; i++)
+    for (int i = 0; i < sfs_length; i++)
     { // Loop over each row
         for (int j = 0; j < grid_size; j++)
         {                                      // Loop over each column
@@ -180,12 +184,13 @@ void save_cumulated_weight(int n_sample, int grid_size, double **matrix, char *f
     printf("Matrice écrite dans le fichier %s avec succès !\n", filename); // Print success message
 }
 
-long double *Wik(int n_sample)
+
+long double *Wik(int n_sample, int sfs_length)
 {
     long double Wk, Wkp1;
     long double tmp_k, tmp_kp1;
-    long double *W_i_k = init_wik(n_sample);
-    for (int i = 1; i < n_sample; i++)
+    long double *W_i_k = init_wik(n_sample, sfs_length);
+    for (int i = 1; i <= sfs_length; i++)
     {
         // printf("%d\n", i);
         for (int k = 2; k <= n_sample - 2; k++)
@@ -205,6 +210,7 @@ long double *Wik(int n_sample)
     return W_i_k;
 }
 
+
 long double *element_time(int n_sample, double Hj)
 {
     long double *vkj = malloc(sizeof(long double) * (n_sample - 1));
@@ -217,21 +223,19 @@ long double *element_time(int n_sample, double Hj)
     return vkj;
 }
 
-void weigth_grid_i(double **weight_grid, long double *wik, int col, int n_sample, double Hj)
+
+void weigth_grid_i(double **weight_grid, long double *wik, int col, int n_sample, int sfs_length, double Hj)
 {
     long double *vkj = element_time(n_sample, Hj);
-    for (int j = 0; j < n_sample - 1; j++)
+    for (int j = 0; j < sfs_length; j++)
     {
         for (int k = 0; k < n_sample - 1; k++)
-        {
             weight_grid[j][col] += vkj[k] * wik[j * (n_sample - 1) + k];
             // if(wik[j * (n_sample - 1) + k] < 1e-8)
             // break;
-        }
     }
     free(vkj);
 }
-
 
 
 /**
@@ -257,29 +261,106 @@ void weigth_grid_i(double **weight_grid, long double *wik, int col, int n_sample
  *     // Use `weights` here
  *     free(weights);  // Free the allocated memory when done
  */
-double **cumulatve_weight_v2(int n_sample, int grid_size, double *H)
+double **cumulatve_weight_v2(int n_sample, int sfs_length, int grid_size, double *H)
 {
 
 
     // See kimmel and polanski 2003
-    long double *wik = Wik(n_sample); 
+    long double *wik = Wik(n_sample, sfs_length); 
 
     // Allocate memory for the weight grid, which stores cumulative branch lengths
-    double **weight_grid = malloc((n_sample - 1) * sizeof(double *)); // (n_sample - 1) rows for different descendant groups
-    for (int i = 0; i < n_sample - 1; i++)
+    double **weight_grid = malloc(sfs_length * sizeof(double *)); // (n_sample - 1) rows for different descendant groups
+    for (int i = 0; i < sfs_length; i++)
         weight_grid[i] = calloc(grid_size + 2, sizeof(double)); // Initialize each row with size grid_size + 2
 
     // Calculate the cumulative branch lengths for each descendant group in the grid
     for (int i = 1; i < grid_size + 1; i++)
-        weigth_grid_i(weight_grid, wik, i, n_sample, H[i - 1]);
+        weigth_grid_i(weight_grid, wik, i, n_sample, sfs_length, H[i - 1]);
 
     // Finalize the cumulative branch lengths for the last time interval (infinity)
-    weigth_grid_i(weight_grid, wik, grid_size + 1, n_sample, INFINITY);
+    weigth_grid_i(weight_grid, wik, grid_size + 1, n_sample, sfs_length, INFINITY);
 
     // Free allocated memory for the time scale and P_i,k values
-    free(H);
+    // free(H);
     free(wik);
 
     // Return the computed cumulative weight grid
     return weight_grid;
+}
+
+
+void fold_time_grid(Time_gride *tg, SFS sfs)
+{
+    if(!sfs.oriented)
+    { 
+        int folded_size = (sfs.n_haplotypes - 1) / 2 + (sfs.n_haplotypes - 1) % 2;
+        int unfolded_size = sfs.n_haplotypes - 1;
+        if(sfs.troncation > 5)
+        unfolded_size = (unfolded_size < sfs.troncation) ? unfolded_size : sfs.troncation; 
+        for(int i = folded_size; i < unfolded_size; i ++)
+        {
+            for (int j = 0; j < tg->grid_size * 1000 + 2; j++)
+            {
+                if(!sfs.singleton && i == sfs.n_haplotypes - 2)
+                    tg->cumulative_bl[sfs.n_haplotypes - 2 - i][j] = tg->cumulative_bl[i][j];
+                else
+                    tg->cumulative_bl[sfs.n_haplotypes - 2 - i][j] += tg->cumulative_bl[i][j];
+            }
+            free(tg->cumulative_bl[i]);
+        }
+    }
+}
+
+
+void erased_singleton_grid(Time_gride *tg, SFS sfs)
+{
+    if(sfs.oriented && !sfs.singleton)
+    {
+        double *tmp = tg->cumulative_bl[0];
+        for(int i = 1; i < sfs.sfs_length; i ++)
+        {
+            tg->cumulative_bl[i - 1] = tg->cumulative_bl[i];
+        }   
+        free(tmp);
+    }
+}
+
+
+Time_gride init_time_grid(SFS sfs, int grid_size, double ub, double lb, char *outfile)
+{
+    Time_gride time_grid;
+    time_grid.grid_size = grid_size;
+    time_grid.time_scale = generate_logarithmic_scale(grid_size * 1000 , ub, lb, outfile);
+    int sfs_length = sfs.n_haplotypes - 1;
+    if(sfs.troncation > 5)
+        sfs_length = (sfs_length < sfs.troncation) ? sfs_length : sfs.troncation;
+    printf("%d\n", sfs_length);
+    time_grid.cumulative_bl = cumulatve_weight_v2(
+        sfs.n_haplotypes,
+        sfs_length,
+        grid_size * 1000,
+        time_grid.time_scale
+    );
+    fold_time_grid(&time_grid, sfs);
+    erased_singleton_grid(&time_grid, sfs);
+    return time_grid;
+}
+
+
+Time_gride init_time_grid_H(int n_haplotypes, int grid_size, double *H)
+{
+    Time_gride time_grid;
+    time_grid.grid_size = grid_size;
+    time_grid.time_scale = H;
+    time_grid.cumulative_bl =  cumulatve_weight_v2(n_haplotypes, n_haplotypes - 1, grid_size, H);
+    return time_grid;
+}
+
+
+void clear_time_grid(Time_gride tg, int sfs_length)
+{
+    free(tg.time_scale);
+    for (int i = 0; i < sfs_length; i++)
+        free(tg.cumulative_bl[i]); // Free each sub-array
+    free(tg.cumulative_bl);
 }

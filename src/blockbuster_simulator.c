@@ -286,15 +286,15 @@ int main(int argc, char *argv[])
 
     start = clock(); // Début de la mesure du temps
     double *H = absolute_to_relative_times(args.parameters, args.n_parameters);
-    double **weight_grid = cumulatve_weight_v2(args.n_samples, args.n_parameters / 2, H);
-    double *sfs = sfs_infinite(args, weight_grid);
+    Time_gride tg = init_time_grid_H(args.n_samples, args.n_parameters / 2, H);
+    double *sfs = sfs_infinite(args, tg.cumulative_bl);
     end = clock(); // Fin de la mesure du temps
     elapsed_time = ((double)(end - start)) / CLOCKS_PER_SEC; // Conversion en secondes
     printf("Temps d'exécution : %.10f secondes\n", elapsed_time);
     write_sfs_to_file(sfs, args);
-    // save_cumulated_weight(args.n_samples, args.n_parameters/2 + 1, branch_lengthes, "grid2.txt");
     free_args(&args);
     free(sfs);
+    clear_time_grid(tg, args.n_samples - 1);
     return 0;
 }
 

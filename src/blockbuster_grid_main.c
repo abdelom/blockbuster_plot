@@ -72,10 +72,9 @@ int main(int argc, char *argv[])
         H = generate_logarithmic_scale(grid_size, upper_bound, lower_bound, outputfile);
     else
         H = generate_linear_scale(grid_size, upper_bound, lower_bound, outputfile);
-    double ** weight_grid = cumulatve_weight_v2(n_sample, grid_size, H);
-    save_cumulated_weight(n_sample, grid_size + 2, weight_grid, outputfile);
-    free_integral_grid(weight_grid, n_sample);
-    printf("%d\n", grid_size);
-
+    // double ** weight_grid = cumulatve_weight_v2(n_sample, grid_size, H);
+    Time_gride tg = init_time_grid_H(n_sample, grid_size, H);
+    save_cumulated_weight(n_sample, grid_size + 2, tg.cumulative_bl, outputfile);
+    clear_time_grid(tg, n_sample - 1);
     return 0;
 }
