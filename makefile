@@ -15,9 +15,9 @@ SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 # Dépendances spécifiques : chaque exécutable n’utilise pas tous les objets
-OBJS1 = $(OBJ_DIR)/blockbuster_grid_main.o $(OBJ_DIR)/blockbuster_grid.o $(OBJ_DIR)/linear_regression.o
-OBJS2 = $(OBJ_DIR)/blockbuster_main.o $(OBJ_DIR)/blockbuster.o $(OBJ_DIR)/blockbuster_grid.o $(OBJ_DIR)/sfs.o $(OBJ_DIR)/linear_regression.o
-OBJS3 = $(OBJ_DIR)/blockbuster_simulator.o $(OBJ_DIR)/blockbuster_grid.o $(OBJ_DIR)/linear_regression.o
+OBJS1 = $(OBJ_DIR)/blockbuster_grid_main.o $(OBJ_DIR)/blockbuster_grid.o $(OBJ_DIR)/linear_regression.o $(OBJ_DIR)/linear_regression_f.o
+OBJS2 = $(OBJ_DIR)/blockbuster_main.o $(OBJ_DIR)/blockbuster.o $(OBJ_DIR)/blockbuster_grid.o $(OBJ_DIR)/sfs.o $(OBJ_DIR)/linear_regression.o $(OBJ_DIR)/linear_regression_f.o
+OBJS3 = $(OBJ_DIR)/blockbuster_simulator.o $(OBJ_DIR)/blockbuster_grid.o $(OBJ_DIR)/linear_regression.o $(OBJ_DIR)/linear_regression_f.o
 
 # Compilateur et options
 CC = gcc

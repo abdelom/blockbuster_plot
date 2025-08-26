@@ -32,7 +32,7 @@ typedef struct solution
 
 
 // void regressor_matrix(int n, int m, double *weight, double *regressors);
-// System init_sytem(int sfs_length, Solution sol, Time_gride tg);
+System init_sytem(int sfs_length, Solution sol, Time_gride tg);
 // void replace_negative_with_1(double *theta, size_t n);
 // double *SFS_theo(double *thetas, System system, int n)
 // double *SFS_to_freq(double *sfs_theo, int n, System system);
@@ -43,4 +43,9 @@ Solution init_solution_size(int nb_breakpoints);
 Solution copy_solution(Solution sol);
 void clear_solution(Solution sol);
 void save_solution(Solution sol, SFS sfs, Time_gride tg ,char *out_file);
+double distance(double *sfs_obs, double *sfs_theo, int n);
+double log_likelihood(SFS sfs, System system, Solution *sol, double * sfs_theo);
+double *SFS_theo(double *thetas, System system, int n);
+void regressor_matrix(int n, int m, double *weight, double *regressors);
+void replace_negative_with_1(double *theta, size_t n);
 #endif // PAST_FINDER_H

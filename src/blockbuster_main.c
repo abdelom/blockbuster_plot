@@ -4,6 +4,7 @@
 #include <getopt.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include "linear_regression_f.h"
 
 
 typedef struct
@@ -22,6 +23,7 @@ typedef struct
     double *theta_flag;
     int theta_flag_count;
 } Args;
+
 
 
 void usage(char *prog_name)
@@ -252,12 +254,27 @@ int main(int argc, char *argv[])
     if (args.recent > 0)
         args.lower_bound = 1. / (double)(args.recent * sfs.n_haplotypes);
     Time_gride time_grid = init_time_grid(sfs, args.grid_size, args.upper_bound, args.lower_bound, outfile);
-
+    Flag flag = init_flag(sfs.sfs_length, args.theta_flag , args.theta_flag_count);
     clock_t start_time = clock(); // Start time measurement
-    Solution *list_solution = find_scenario(sfs, time_grid, args.changes);
+    Solution *list_solution;
+    if (args.theta_flag_count > 0)
+    {
+        list_solution = find_scenario_f(sfs, time_grid, args.changes, flag);
+        save_solution(list_solution[0], sfs, time_grid, outfile);
+        clear_solution(list_solution[0]);
+        free(flag.thetas);
+        free(flag.sfs);
+        // c =  flag.n_theta - 1;
+    }
+    else
+    {
+        list_solution = find_scenario(sfs, time_grid, args.changes);
+        save_list_solution(list_solution, NULL, sfs, outfile, args.changes, time_grid);
+    }
+    // generate_brk_combinations_f(flag.n_theta - 1, sfs, time_grid, flag);
     clock_t end_time = clock();                                                // End time measurement
     double cpu_time_used = ((double)(end_time - start_time)) / CLOCKS_PER_SEC; // Calculate the time in seconds
-    save_list_solution(list_solution, NULL, sfs, outfile, args.changes, time_grid);
+    
     printf("Time taken for system resolution: %f seconds\n", cpu_time_used); // Print the elapsed time
     // free_integral_grid(cumul_weight, n_sample);
 

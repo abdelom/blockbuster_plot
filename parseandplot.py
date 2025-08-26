@@ -391,11 +391,12 @@ def plot_demographic_scenarios3(scenarios, time_scale, output_directory, mu=-1, 
     best = find_best_scenariol(scenarios)
     # A4 page configuration
     n_cols = 2  # Number of columns
-    n_rows = len(scenarios) // 2 + len(scenarios) % 2  # Number of rows per page
-    fig_a4, axs_a4 = plt.subplots(n_rows, n_cols, figsize=(8.27, 11.69), sharex=True, sharey=True)  # A4 size in inches
-    fig_a4.subplots_adjust(hspace=0.5, wspace=0.4)
-    axs_a4 = np.array(axs_a4)  # Ensure axs_a4 is a numpy array for easier indexing
-    plot_idx = 0  # Index for subplot tracking
+    n_rows = len(scenarios) // 2 + len(scenarios) % 2  # Number of rows per pag
+    if len(scenarios) > 1:
+        fig_a4, axs_a4 = plt.subplots(n_rows, n_cols, figsize=(8.27, 11.69), sharex=True, sharey=True)  # A4 size in inches
+        fig_a4.subplots_adjust(hspace=0.5, wspace=0.4)
+        axs_a4 = np.array(axs_a4)  # Ensure axs_a4 is a numpy array for easier indexing
+        plot_idx = 0  # Index for subplot tracking
 
     for idx, scenario in enumerate(scenarios):
         # Convert times and thetas for the scenario
@@ -428,28 +429,28 @@ def plot_demographic_scenarios3(scenarios, time_scale, output_directory, mu=-1, 
             scenario.times_years = garder_doublons(times[2])
 
         # Get current subplot for A4 layout
-        row, col = divmod(plot_idx, n_cols)
-        ax = axs_a4[row, col]
+        # row, col = divmod(plot_idx, n_cols)
+        # ax = axs_a4[row, col]
 
-        # Plot individual scenario in the subplot
-        ax.set_xscale('log')
-        ax.set_yscale('log')
+        # # Plot individual scenario in the subplot
+        # ax.set_xscale('log')
+        # ax.set_yscale('log')
 
-        # Plot the first scenario in red, and others in blue
+        # # Plot the first scenario in red, and others in blue
         color = 'red' if idx == best else 'blue'
 
-        # Appel à plot_individual_scenario avec les bons arguments
-        plot_individual_scenario(ax, times, thetas, idx, Nes, piecewise_data, z, color, theta)
+        # # Appel à plot_individual_scenario avec les bons arguments
+        # plot_individual_scenario(ax, times, thetas, idx, Nes, piecewise_data, z, color, theta)
 
-        ax.set_title(f"{idx + 1} bloks")
+        # ax.set_title(f"{idx + 1} bloks")
 
-        # Show labels only for the first column (y-axis) and last row (x-axis)
-        ax.set_ylabel("")  # Remove y-axis label for non-first columns
+        # # Show labels only for the first column (y-axis) and last row (x-axis)
+        # ax.set_ylabel("")  # Remove y-axis label for non-first columns
         
-        ax.set_xlabel("")  # Remove x-axis label for non-last rows
-        ax.set_xlabel("")
-        ax.tick_params(axis='x', labelsize=15, rotation = 45)
-        ax.tick_params(axis='y', labelsize=15)
+        # ax.set_xlabel("")  # Remove x-axis label for non-last rows
+        # ax.set_xlabel("")
+        # ax.tick_params(axis='x', labelsize=15, rotation = 45)
+        # ax.tick_params(axis='y', labelsize=15)
         # Save the individual plot as PNG
         fig_individual, ax_individual = plt.subplots(figsize=(6, 4))  # Individual plot size
         ax_individual.set_xscale('log')
@@ -463,33 +464,33 @@ def plot_demographic_scenarios3(scenarios, time_scale, output_directory, mu=-1, 
         fig_individual.savefig(individual_output_file, dpi=300)
         plt.close(fig_individual)
 
-        plot_idx += 1
+        # plot_idx += 1
 
-        # If the current page is full, save it and start a new one
-        if plot_idx >= n_rows * n_cols:
-            # Add shared labels before saving
-            fig_a4.supxlabel("Time (log scale)", fontsize=6)  # Reduced font size for x-axis
-            fig_a4.supylabel("Population Size (log scale)", fontsize=6)  # Reduced font size for y-axis
-            a4_output_file = os.path.join(plots_directory, f'individual_plots_page_{idx // (n_rows * n_cols) + 1}.pdf')
-            plt.tight_layout()
-            fig_a4.savefig(a4_output_file)
-            plt.close(fig_a4)
+    #     # If the current page is full, save it and start a new one
+    #     if plot_idx >= n_rows * n_cols:
+    #         # Add shared labels before saving
+    #         fig_a4.supxlabel("Time (log scale)", fontsize=6)  # Reduced font size for x-axis
+    #         fig_a4.supylabel("Population Size (log scale)", fontsize=6)  # Reduced font size for y-axis
+    #         a4_output_file = os.path.join(plots_directory, f'individual_plots_page_{idx // (n_rows * n_cols) + 1}.pdf')
+    #         plt.tight_layout()
+    #         fig_a4.savefig(a4_output_file)
+    #         plt.close(fig_a4)
 
-            # Create a new A4 figure for the next set of plots
-            fig_a4, axs_a4 = plt.subplots(n_rows, n_cols, figsize=(8.27, 11.69), sharex=True, sharey=True)
-            fig_a4.subplots_adjust(hspace=0.5, wspace=0.4)
-            axs_a4 = np.array(axs_a4)  # Ensure axs_a4 is a numpy array
-            plot_idx = 0
+    #         # Create a new A4 figure for the next set of plots
+    #         fig_a4, axs_a4 = plt.subplots(n_rows, n_cols, figsize=(8.27, 11.69), sharex=True, sharey=True)
+    #         fig_a4.subplots_adjust(hspace=0.5, wspace=0.4)
+    #         axs_a4 = np.array(axs_a4)  # Ensure axs_a4 is a numpy array
+    #         plot_idx = 0
 
-    # Save the last page if it has any plots
-    if plot_idx > 0:
-        # Add shared labels before saving
-        fig_a4.supxlabel("Time (log scale)", fontsize=6)  # Reduced font size for x-axis
-        fig_a4.supylabel("Population Size (log scale)", fontsize=6)  # Reduced font size for y-axis
-        a4_output_file = os.path.join(plots_directory, f'individual_plots_page_{len(scenarios) // (n_rows * n_cols) + 1}.pdf')
-        plt.tight_layout()
-        fig_a4.savefig(a4_output_file)
-        plt.close(fig_a4)
+    # # Save the last page if it has any plots
+    # if plot_idx > 0:
+    #     # Add shared labels before saving
+    #     fig_a4.supxlabel("Time (log scale)", fontsize=6)  # Reduced font size for x-axis
+    #     fig_a4.supylabel("Population Size (log scale)", fontsize=6)  # Reduced font size for y-axis
+    #     a4_output_file = os.path.join(plots_directory, f'individual_plots_page_{len(scenarios) // (n_rows * n_cols) + 1}.pdf')
+    #     plt.tight_layout()
+    #     fig_a4.savefig(a4_output_file)
+    #     plt.close(fig_a4)
     deme_format(scenarios[best], output_directory + "/deme.yml")
     print(f"All individual plots have been saved in the directory: {plots_directory}")
 

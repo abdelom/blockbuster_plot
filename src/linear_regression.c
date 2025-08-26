@@ -326,21 +326,21 @@ void system_resolution(Solution *sol, SFS sfs, Time_gride tg)
 }
 
 
-// Function to initialize an empty solution with minimal allocation
-Solution init_solution()
-{
-    Solution sol;
-    sol.thetas = malloc(sizeof(double)); // Allocate memory for a single mutation rate (could be resized later)
-    sol.breakpoints = NULL;              // No breakpoints initially, as no changes are assumed
-    sol.nb_breakpoints = 0;              // Start with zero size changes, making this an empty or in#include <lapacke.h>
-    sol.log_likelihood = 0;              // Initialize likelihood to zero, to be calculated after SFS fitting
-    sol.distance = 0;                    // Initialize distance to zero, to be calculated later
-    sol.se_thetas = NULL;
-    sol.residues = NULL;
-    sol.fitted_sfs = NULL;
-    // sol.AIC = 0;                           // Optional: AIC initialization, could be implemented for model comparison
-    return sol;
-}
+// // Function to initialize an empty solution with minimal allocation
+// Solution init_solution()
+// {
+//     Solution sol;
+//     sol.thetas = malloc(sizeof(double)); // Allocate memory for a single mutation rate (could be resized later)
+//     sol.breakpoints = NULL;              // No breakpoints initially, as no changes are assumed
+//     sol.nb_breakpoints = 0;              // Start with zero size changes, making this an empty or in#include <lapacke.h>
+//     sol.log_likelihood = 0;              // Initialize likelihood to zero, to be calculated after SFS fitting
+//     sol.distance = 0;                    // Initialize distance to zero, to be calculated later
+//     sol.se_thetas = NULL;
+//     sol.residues = NULL;
+//     sol.fitted_sfs = NULL;
+//     // sol.AIC = 0;                           // Optional: AIC initialization, could be implemented for model comparison
+//     return sol;
+// }
 
 // Function to initialize a solution with a specified number of breakpoints
 Solution init_solution_size(int nb_breakpoints)

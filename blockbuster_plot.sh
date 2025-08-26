@@ -12,22 +12,26 @@ function usage {
     echo "  -L, --genome_length <value>    Genome length in number of sites (double, default: -1)"
     echo "  -m, --mutation_rate <value>    Mutation rate per site per generation (double, default: -1)"
     echo "  -g, --generation_time <value>  Generation time in years (double, default: -1)"
+    echo "  -T, --theta_list <list>        List of fixed population mutation rates (comma-separated)."
     echo
     echo "Additional options:"
-    echo "  -o, --oriented <1|0>           Indicates if the SFS is oriented (default: 0). Set to 0 if the SFS is folded."
-    echo "  -b, --blocks <num_blocks>      Number of blocks. If b = n, the SFS is divided into training and test sets where the test set contains 1/n sites and the training set contains (n-1)/n sites (default: 1)."
+    echo "  -o, --oriented <1|0>           Indicates if the SFS is oriented (default: 0)."
+    echo "  -b, --blocks <num_blocks>      Number of blocks (default: 1)."
     echo "  -u, --upper_bound <value>      Upper bound for the time grid in Ne(0) generations (default: 1)."
     echo "  -l, --lower_bound <value>      Lower bound for the time grid in Ne(0) generations (default: 1e-4)."
-    echo "  -c, --changes <value>          Maximum number of population size changes for which the search is exhaustive. For values between c and 10, a heuristic is applied (default: 5)."
-    echo "  -n, --grid_size <value>        Number of time point between lower bound and upper bound within the grid time(default: 35)."
+    echo "  -c, --changes <value>          Maximum number of population size changes (default: 5)."
+    echo "  -n, --grid_size <value>        Number of time points between lower and upper bound (default: 35)."
+    echo "  -t, --troncation <value>       Troncation value (default: 0)."
+    echo "  -r, --recent <value>           Recent value (default: -1)."
+    echo "  -S, --singleton <1|0>          Enable or disable singleton mode (default: 1)."
     echo "      --help                     Display this help message and exit."
     echo
     echo "Example usage:"
-    echo "  $0 --sfs my_sfs_file.txt --prefixe_directory ./output --genome_length 3000000 --mutation_rate 1e-8 --generation_time 25 --changes 5"
+    echo "  $0 --sfs my_sfs_file.txt --prefixe_directory ./output --theta_list \"1000,2000,5000\""
     exit 1
 }
 
-# Default values for optional arguments
+# Default values
 SFS_FILE=""
 OUTPUT_DIR=""
 ORIENTED=0
@@ -42,13 +46,13 @@ GRID_SIZE=35
 CHANGES=5
 RECENT="-1"
 SING=1
+THETA_LIST=""   # <- LISTE DE THETAS FIXÉS
 
 # Parse command-line arguments with getopt
-ARGS=$(getopt -o "s:p:o:b:L:m:g:u:l:c:r:n:S:t:" \
-              -l "sfs:,prefixe_directory:,oriented:,blocks:,genome_length:,mutation_rate:,generation_time:,upper_bound:,lower_bound:,changes:,grid_size:,singleton:troncation,help" \
+ARGS=$(getopt -o "s:p:o:b:L:m:g:u:l:c:r:n:S:t:T:" \
+              -l "sfs:,prefixe_directory:,oriented:,blocks:,genome_length:,mutation_rate:,generation_time:,upper_bound:,lower_bound:,changes:,grid_size:,singleton:,troncation:,theta_list:,help" \
               -- "$@")
 
-# Gestion des erreurs de getopt
 if [ $? -ne 0 ]; then
     echo "Error in parsing arguments." >&2
     usage
@@ -56,8 +60,6 @@ if [ $? -ne 0 ]; then
 fi
 
 eval set -- "$ARGS"
-
-# Par défaut, SINGLETON est désactiv
 
 while true; do
     case "$1" in
@@ -74,7 +76,8 @@ while true; do
         -t|--troncation) TRONC="$2"; shift 2;;
         -r|--recent) RECENT="$2"; shift 2;;
         -n|--grid_size) GRID_SIZE="$2"; shift 2;;
-        -S|--singleton) SING="$2"; shift 2;;  # ✅ Détection correcte
+        -S|--singleton) SING="$2"; shift 2;;
+        -T|--theta_list) THETA_LIST="$2"; shift 2;;
         --help) usage; exit 0;;
         --) shift; break;;
         *) echo "Unknown option: $1" >&2; usage; exit 1;;
@@ -87,12 +90,6 @@ if [ -z "$SFS_FILE" ] || [ -z "$OUTPUT_DIR" ]; then
     usage
     exit 1
 fi
-
-# Automatisation du mode orienté
-# if [[ "$SFS_FILE" == *"folded"* ]]; then
-#     ORIENTED=0
-#     echo "The SFS file is folded. The '-o' option is automatically set to 0."
-# fi
 
 # Affichage des options choisies
 echo "SFS file: $SFS_FILE"
@@ -107,13 +104,15 @@ echo "Lower bound: $LOWER_BOUND"
 echo "Number of changes: $CHANGES"
 echo "Number of time points: $GRID_SIZE"
 echo "Singleton mode: $SING"
+echo "Theta list: $THETA_LIST"
 
 # Exécution du programme C
 echo "Running C program..."
 START_TIME_C=$(date +%s)
-echo $SINGLETON
-echo --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT" -n "$GRID_SIZE" -S "$SING" -t "$TRONC"
-./bin/blockbuster_main --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT" -n "$GRID_SIZE" -S "$SING" -t "$TRONC"
+
+./bin/blockbuster_main --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" \
+    -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT" -n "$GRID_SIZE" \
+    -S "$SING" -t "$TRONC" -T "$THETA_LIST"
 
 if [ $? -ne 0 ]; then
     echo "Error: C program failed to execute. Exiting."
@@ -124,11 +123,12 @@ END_TIME_C=$(date +%s)
 EXEC_TIME_C=$((END_TIME_C - START_TIME_C))
 echo "C program execution time: $EXEC_TIME_C seconds"
 
-# Measure execution time for Python program
+# Exécution du programme Python
 echo "Running Python program..."
 START_TIME_PYTHON=$(date +%s)
-echo -i "$OUTPUT_DIR/scenarios.txt" -o "$OUTPUT_DIR" -l "$GENOME_LENGTH" -m "$MUTATION_RATE" -g "$GENERATION_TIME"
-python3 parseandplot.py -i "$OUTPUT_DIR/scenarios.txt" -o "$OUTPUT_DIR" -l "$GENOME_LENGTH" -m "$MUTATION_RATE" -g "$GENERATION_TIME"
+
+python3 parseandplot.py -i "$OUTPUT_DIR/scenarios.txt" -o "$OUTPUT_DIR" \
+    -l "$GENOME_LENGTH" -m "$MUTATION_RATE" -g "$GENERATION_TIME"
 
 if [ $? -ne 0 ]; then
     echo "Error: Python program failed to execute."

@@ -5,9 +5,13 @@
 #include <stdlib.h>
 #include <time.h>
 #include "linear_regression.h"
+#include "linear_regression_f.h"
 
 // Fonction pour trouver le scénario
 Solution *find_scenario(SFS sfs, Time_gride tg, int changes);
+// Solution generate_brk_combinations_f(int nb_breakpoints, SFS sfs, Time_gride tg, Flag f);
+Solution *find_scenario_f(SFS sfs, Time_gride tg, int changes, Flag flag);
+
 // solution* recent_infrence(solution *list_solution, int changes, double **sfs, double ** cumul_weight, int sfs_length, int n_sample);
 // void save_solution(solution sol, int n_sample, char *out_file, double const_ren, int sfs_length);
 

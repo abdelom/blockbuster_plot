@@ -11,6 +11,7 @@
 #include "blockbuster.h"
 #include "blockbuster_grid.h"
 #include "linear_regression.h"
+#include "linear_regression_f.h"
 
 /**
  * Generates the next combination of breakpoints in lexicographic order within a specified grid.
@@ -89,9 +90,52 @@ Solution generate_brk_combinations(int nb_breakpoints, SFS sfs, Time_gride tg)
         }
     }
     clear_solution(sol);
-    // thetas_se(&tmp_sol, sfs_length, cumul_weight);
-    // residues(&tmp_sol, cumul_weight, sfs_length, sfs[0]);
-    // Return the best solution with the optimal breakpoint combination for a givent nulber of changes in population size
+    return tmp_sol;
+}
+
+
+
+/**
+ * Generates and evaluates all possible breakpoint combinations to find the optimal solution
+ * with the highest log-likelihood, saving each intermediate solution and returning the best one.
+ *
+ * @param nb_breakpoints  Number of breakpoints (population size changes) to consider.
+ * @param sfs_length      Length of the Site Frequency Spectrum (SFS).
+ * @param cumul_weight    Cumulative weights matrix for branch lengths across time intervals.
+ * @param sfs             Observed SFS data (theoretical and observed SFS).
+ * @param grid_size       Total number of grid points available for placing breakpoints.
+ * @param n_sample        Sample identifier or index used for saving solutions.
+ *
+ * @return                The `solution` structure containing the optimal combination of breakpoints
+ *                        with the highest log-likelihood value.
+ */
+Solution generate_brk_combinations_f(int nb_breakpoints, SFS sfs, Time_gride tg, Flag f)
+{
+    // Initialize the solution with specified number of breakpoints
+    Solution sol = init_solution_size(nb_breakpoints);
+    // Set the last breakpoint to the grid limit (end boundary)
+    sol.breakpoints[nb_breakpoints] = GRIDREFINE * tg.grid_size + 1;
+    // Flag for stopping the combination generation
+    int arret = 1;
+    // Calculate the initial solution with the given breakpoints
+    system_resolution_f(&sol, sfs, tg, f);
+    // Initialize a temporary solution to keep track of the best found solution
+    Solution tmp_sol = copy_solution(sol);
+    // Loop through all breakpoint combinations until `arret` is set to 0
+    while (arret && nb_breakpoints > 0)
+    {
+        // Generate the next combination of breakpoints
+        arret = recursive_bk_combination(sol.breakpoints, sol.nb_breakpoints, tg.grid_size);
+        // Calculate the solution (log-likelihood and distance) for the new combination
+        system_resolution_f(&sol, sfs, tg, f);
+        // If the new solution has a higher log-likelihood and all theta values are positive, keep its
+        if (isnan(tmp_sol.log_likelihood) || sol.log_likelihood > tmp_sol.log_likelihood)
+        {
+            clear_solution(tmp_sol);
+            tmp_sol = copy_solution(sol);
+        }
+    }
+    clear_solution(sol);
     return tmp_sol;
 }
 
@@ -120,6 +164,25 @@ Solution refine_solution_b(Solution sol_initiale, int b, SFS sfs, Time_gride tg,
     return solm; 
 }
 
+Solution refine_solution_b_f(Solution sol_initiale, int b, SFS sfs, Time_gride tg, int sign, Flag flag)
+{
+    Solution sol1 = copy_solution(sol_initiale);
+    Solution solm = copy_solution(sol_initiale);
+    sol1.breakpoints[b]  += sign;
+    system_resolution_f(&sol1, sfs, tg, flag);
+    
+    while(sol1.log_likelihood > solm.log_likelihood){
+        clear_solution(solm);
+        solm = copy_solution(sol1);
+        sol1.breakpoints[b]  += sign;
+        system_resolution_f(&sol1, sfs, tg, flag);
+    }
+    clear_solution(sol1);
+    // clear_solution(sol2);
+    return solm; 
+}
+
+
 
 void refine_solution(Solution *sol_initiale, SFS sfs, Time_gride tg)
 {
@@ -129,6 +192,33 @@ void refine_solution(Solution *sol_initiale, SFS sfs, Time_gride tg)
         {
             Solution solp = refine_solution_b(*sol_initiale, b, sfs, tg, -1);
             Solution solm = refine_solution_b(*sol_initiale, b, sfs, tg, +1);
+            if(sol_initiale->log_likelihood < solm.log_likelihood)
+            {
+                clear_solution(*sol_initiale);
+                *sol_initiale = copy_solution(solm);
+            }
+            else{
+                if(sol_initiale-> log_likelihood < solp.log_likelihood)
+                {
+                    clear_solution(*sol_initiale);
+                    *sol_initiale = copy_solution(solp);
+                }
+            }
+            clear_solution(solp);
+            clear_solution(solm);
+        }
+    }
+}
+
+
+void refine_solution_f(Solution *sol_initiale, SFS sfs, Time_gride tg, Flag flag)
+{
+    for(int i =0; i < 100; i ++)
+    {   
+        for(int b = sol_initiale->nb_breakpoints - 1; b >= 0; b --)
+        {
+            Solution solp = refine_solution_b_f(*sol_initiale, b, sfs, tg, -1, flag);
+            Solution solm = refine_solution_b_f(*sol_initiale, b, sfs, tg, +1, flag);
             if(sol_initiale->log_likelihood < solm.log_likelihood)
             {
                 clear_solution(*sol_initiale);
@@ -189,6 +279,54 @@ Solution *find_scenario(SFS sfs, Time_gride tg, int changes)
         printf("%d ", nb_breakpoints);
         nb_breakpoints++;
     }
+    // thetas_se(&liste_solution[0], sfs_length, cumul_weight);
+    // residues(&liste_solution[0], cumul_weight, sfs_length, sfs[0]);
+    // Return the list of solutions
+    return liste_solution;
+}
+
+/**
+ * Finds the best scenarios by generating combinations of breakpoints and solving
+ * the regression for each configuration to estimate population mutation rates (thetas).
+ *
+ * @param sfs_length   Length of the observed Site Frequency Spectrum (SFS).
+ * @param cumul_weight Pointer to a 2D array of cumulative weights for regression.
+ * @param sfs          Pointer to a 2D array where:
+ *                      - sfs[0] is the training SFS used for regression.
+ *                      - sfs[1] is the test SFS used for validation.
+ * @param grid_size    size of the discrete gride of time points
+ * @param n_sample     sample size
+ * @param changes      Maximum number of allowed breakpoint changes.
+ *
+ * @return             Array of solutions containing the best solution for each number of 
+ *                     population size changes, from 0 to `changes`. Each solution includes
+ *                     estimated thetas and associated metrics (log-likelihood, distance).
+ *
+ * Steps:
+ * 1. Calculate `const_ren`, the proportion of sites represented in the training SFS (`sfs[0]`).
+ *    This is used to adjust scaling if needed.
+ * 3. Iteratively generate scenarios for `nb_breakpoints` from 0 to `changes`:
+ *    - Use `generate_brk_combinations` to compute the best solution for each number of breakpoints.
+ * 4. Return the array of solutions for all configurations.
+ */
+Solution *find_scenario_f(SFS sfs, Time_gride tg, int changes, Flag flag)
+{
+    // Allocate memory for storing solutions for all configurations of breakpoints
+    Solution *liste_solution = malloc(sizeof(Solution) * (1));
+
+    // // Iterate through the number of breakpoints from 0 to `changes`
+    int nb_breakpoints = flag.n_theta - 1;
+    // while (nb_breakpoints <= changes)
+    // {
+        // Generate the best solution for the current number of breakpoints
+        liste_solution[0] = generate_brk_combinations_f(nb_breakpoints, sfs, tg, flag);
+        if (nb_breakpoints >= 1)
+        {
+            refine_solution_f(&liste_solution[0], sfs, tg, flag);
+        }
+        printf("%d ", nb_breakpoints);
+        // nb_breakpoints++;
+    // }
     // thetas_se(&liste_solution[0], sfs_length, cumul_weight);
     // residues(&liste_solution[0], cumul_weight, sfs_length, sfs[0]);
     // Return the list of solutions
