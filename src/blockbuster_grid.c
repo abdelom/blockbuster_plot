@@ -101,7 +101,7 @@ double* generate_logarithmic_scale(int grid_size, double upper_bound, double low
     }
 
     
-    log_scale[grid_size - 1] = 2.0;
+    log_scale[grid_size - 1] = log_scale[grid_size - 2] + 1.0;
     fprintf(file, "%.10f\n", log_scale[grid_size - 1]);
     fclose(file);
     return log_scale;

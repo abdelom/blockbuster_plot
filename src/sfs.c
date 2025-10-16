@@ -279,7 +279,9 @@ SFS int_sfs(char *sfs_file, int oriented, int troncation, int singleton, int num
     }
     if(!singleton)
         singleton_erased(&sfs);
-    sfs.training_size = 1 / (double) num_blocks;
+    sfs.training_size = 1. - 1. / (double) num_blocks;
+    if(num_blocks == 1)
+        sfs.training_size = 1.;
     sfs.test = test_split(sfs, num_blocks);
     for (int i = 0; i < sfs.sfs_length; i++)
         printf("%f %f \n", sfs.training[i], sfs.test[i]);

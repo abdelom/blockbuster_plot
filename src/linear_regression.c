@@ -120,7 +120,7 @@ void replace_negative_with_1(double *theta, size_t n)
 {
     for (size_t i = 0; i < n; i++) // Iterate through each element of the vector.
     {
-        if (theta[i] < 0) // Check if the current value is negative.
+        if (theta[i] < 1e4) // Check if the current value is negative.
             theta[i] = 5e8; // Replace the negative value with 1.
     }
 }

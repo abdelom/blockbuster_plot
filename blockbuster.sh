@@ -110,7 +110,11 @@ echo "Theta list: $THETA_LIST"
 echo "Running C program..."
 START_TIME_C=$(date +%s)
 
-./bin/blockbuster_main --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" \
+echo ./bin/blockbuster_main --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" \
+    -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT" -n "$GRID_SIZE" \
+    -S "$SING" -t "$TRONC" -T "$THETA_LIST"
+
+time ./bin/blockbuster_main --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" \
     -u "$UPPER_BOUND" -l "$LOWER_BOUND" -c "$CHANGES" -r "$RECENT" -n "$GRID_SIZE" \
     -S "$SING" -t "$TRONC" -T "$THETA_LIST"
 

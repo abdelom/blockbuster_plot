@@ -5,6 +5,8 @@ import argparse
 from matplotlib.ticker import FuncFormatter
 import statsmodels.api as sm
 import seaborn as sns
+import demes
+import demesdraw
 
 
 class Scenario:
@@ -187,11 +189,11 @@ def plot_log_likelihood_vs_breakpoints(scenarios, output_file):
 
     # Tracer le graphe
     plt.figure(figsize=(10, 6))
-    plt.plot(num_breakpoints, log_likelihoods, 'o-', color='blue')
+    plt.plot(num_breakpoints[2:], log_likelihoods[2:], 'o-', color='blue')
     plt.xlabel("Number of Breakpoints")
     plt.ylabel("Log Likelihood")
     plt.title("Log Likelihood vs Number of Breakpoints")
-    plt.grid(True)
+    plt.grid(False)
 
     # Sauvegarder le graphique dans le fichier spécifié
     plt.savefig(output_file, dpi = 300)
@@ -210,7 +212,7 @@ def plot_aic_vs_breakpoints(scenarios, output_file):
     plt.xlabel("Number of Breakpoints")
     plt.ylabel("AIC")
     plt.title("AIC vs Number of parameters")
-    plt.grid(True)
+    plt.grid(False)
 
     # Sauvegarder le graphique dans le fichier spécifié
     plt.savefig(output_file, dpi = 300)
@@ -314,32 +316,32 @@ def plot_individual_scenario(ax1, times, thetas, scenario_idx, Nes=None, piecewi
     ax1.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:g}'))
     ax1.tick_params(axis='x', labelsize=tick_fontsize, rotation=45)
     ax1.tick_params(axis='y', labelsize=tick_fontsize)
-    ax1.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+    ax1.grid(True, which='both', linestyle='', linewidth=0.5, alpha=0.7)
+    ax1.spines['top'].set_visible(False)
+    ax1.spines['right'].set_visible(False)
 
-def plot_piecewise(ax1, piecewise_data, theta):
+
+def plot_piecewise(ax, piecewise_data, theta):
     """
-    Plot the piecewise constant curve (horizontal and vertical lines)
-    using only ax.plot instead of hlines and vlines.
+    Plot a piecewise-constant population size curve using ax.plot
+    and remove top/right spines.
     """
     n = len(piecewise_data) // 2
     times_piecewise = [0] + piecewise_data[:n] + [piecewise_data[:n][-1] + 1]
     sizes_piecewise = [1] + piecewise_data[n:]
-
-    # Scale the sizes
     sizes_scaled = [s * theta for s in sizes_piecewise]
 
     for i in range(len(sizes_scaled)):
         # Horizontal segment
         x_horiz = [times_piecewise[i], times_piecewise[i + 1]]
         y_horiz = [sizes_scaled[i], sizes_scaled[i]]
-        ax1.plot(x_horiz, y_horiz, color='black', label="Inferred" if i == 0 else "")
+        ax.plot(x_horiz, y_horiz, color='black', label="Inferred" if i == 0 else "")
 
         if i < len(sizes_scaled) - 1:
             # Vertical segment
             x_vert = [times_piecewise[i + 1], times_piecewise[i + 1]]
             y_vert = [sizes_scaled[i], sizes_scaled[i + 1]]
-            ax1.plot(x_vert, y_vert, color='black')
-
+            ax.plot(x_vert, y_vert, color='black')
 
 def plot_affine_function(ax1, times, theta, z):
     """
@@ -349,7 +351,7 @@ def plot_affine_function(ax1, times, theta, z):
     ax1.plot(times[0], affine_y, label=f'Simulation', color='black')
 
 
-def deme_format(scenario, output):
+def deme_format(scenario, output, g=-1):
     times = scenario.times
     sizes = scenario.theta
     unit = "Ne generations"
@@ -360,8 +362,11 @@ def deme_format(scenario, output):
     if len(scenario.times_years) > 0:
         times = scenario.times_generations
         unit = "years"
+        generation_time = g  # à condition qu’il existe
     with open(output, 'w') as f:
         f.write(f"time_units: {unit}\n")
+        if unit == "years" and g !=-1:
+            f.write(f"generation_time: {generation_time}\n")
         f.write(f"demes:\n")
         f.write(f"  - name: B\n")
         f.write(f"    start_time: .inf\n")
@@ -438,60 +443,22 @@ def plot_demographic_scenarios3(scenarios, time_scale, output_directory, mu=-1, 
 
         # # Plot the first scenario in red, and others in blue
         color = 'red' if idx == best else 'blue'
-
-        # # Appel à plot_individual_scenario avec les bons arguments
-        # plot_individual_scenario(ax, times, thetas, idx, Nes, piecewise_data, z, color, theta)
-
-        # ax.set_title(f"{idx + 1} bloks")
-
-        # # Show labels only for the first column (y-axis) and last row (x-axis)
-        # ax.set_ylabel("")  # Remove y-axis label for non-first columns
-        
-        # ax.set_xlabel("")  # Remove x-axis label for non-last rows
-        # ax.set_xlabel("")
-        # ax.tick_params(axis='x', labelsize=15, rotation = 45)
-        # ax.tick_params(axis='y', labelsize=15)
-        # Save the individual plot as PNG
         fig_individual, ax_individual = plt.subplots(figsize=(6, 4))  # Individual plot size
         ax_individual.set_xscale('log')
         ax_individual.set_yscale('log')
         plot_individual_scenario(ax_individual, times, thetas, idx, Nes, piecewise_data, z, color, theta)
-        ax_individual.set_title(f"{idx + 1} blocks")
-        # ax_individual.set_xlabel("Time (log scale)", fontsize=15)
-        # ax_individual.set_ylabel("Population Size (log scale)", fontsize=15)
-        individual_output_file = os.path.join(plots_directory, f'scenario_{idx + 1}.png')
+        ax_individual.set_title(f"{idx + 1} epochs")
+        individual_output_file = os.path.join(plots_directory, f'scenario_{idx + 1}_epochs.png')
         plt.tight_layout()
         fig_individual.savefig(individual_output_file, dpi=300)
         plt.close(fig_individual)
 
-        # plot_idx += 1
+    deme_format(scenarios[best], output_directory + "/deme.yml", g)
+    # graph = demes.load(output_directory + "/deme.yml")
 
-    #     # If the current page is full, save it and start a new one
-    #     if plot_idx >= n_rows * n_cols:
-    #         # Add shared labels before saving
-    #         fig_a4.supxlabel("Time (log scale)", fontsize=6)  # Reduced font size for x-axis
-    #         fig_a4.supylabel("Population Size (log scale)", fontsize=6)  # Reduced font size for y-axis
-    #         a4_output_file = os.path.join(plots_directory, f'individual_plots_page_{idx // (n_rows * n_cols) + 1}.pdf')
-    #         plt.tight_layout()
-    #         fig_a4.savefig(a4_output_file)
-    #         plt.close(fig_a4)
-
-    #         # Create a new A4 figure for the next set of plots
-    #         fig_a4, axs_a4 = plt.subplots(n_rows, n_cols, figsize=(8.27, 11.69), sharex=True, sharey=True)
-    #         fig_a4.subplots_adjust(hspace=0.5, wspace=0.4)
-    #         axs_a4 = np.array(axs_a4)  # Ensure axs_a4 is a numpy array
-    #         plot_idx = 0
-
-    # # Save the last page if it has any plots
-    # if plot_idx > 0:
-    #     # Add shared labels before saving
-    #     fig_a4.supxlabel("Time (log scale)", fontsize=6)  # Reduced font size for x-axis
-    #     fig_a4.supylabel("Population Size (log scale)", fontsize=6)  # Reduced font size for y-axis
-    #     a4_output_file = os.path.join(plots_directory, f'individual_plots_page_{len(scenarios) // (n_rows * n_cols) + 1}.pdf')
-    #     plt.tight_layout()
-    #     fig_a4.savefig(a4_output_file)
-    #     plt.close(fig_a4)
-    deme_format(scenarios[best], output_directory + "/deme.yml")
+    # # Tracer le modèle démographique
+    # demesdraw.tubes(graph)
+    # plt.show()
     print(f"All individual plots have been saved in the directory: {plots_directory}")
 
 
@@ -499,74 +466,90 @@ def plot_demographic_scenarios3(scenarios, time_scale, output_directory, mu=-1, 
 # --- Fonctions pour chaque sous-plot ---
 
 def plot_residuals_vs_fitted(ax, fitted, residuals):
-    """Graphique : Résidus vs Valeurs ajustées"""
+    """Plot: Residuals vs Fitted Values"""
     ax.scatter(range(1, len(fitted) + 1), residuals, alpha=0.7)
     ax.axhline(0, color='red', linestyle='--', linewidth=1)
-    ax.set_title('Résidus vs Valeurs ajustées')
-    ax.set_xlabel('Valeurs ajustées')
-    ax.set_ylabel('Résidus')
+    ax.set_title('Residuals vs Fitted Values')
+    ax.set_xlabel('Fitted Values')
+    ax.set_ylabel('Residuals')
+
 
 def plot_qq(ax, residuals):
-    """Graphique : Q-Q Plot"""
+    """Plot: Q-Q Plot"""
     sm.qqplot(residuals, line='45', fit=True, ax=ax)
-    ax.set_title("Q-Q plot des résidus")
+    ax.set_title("Q-Q Plot of Residuals")
+
 
 def plot_histogram(ax, residuals):
-    """Graphique : Histogramme des résidus"""
+    """Plot: Residuals Histogram"""
     sns.histplot(residuals, kde=True, bins=20, ax=ax)
-    ax.set_title('Histogramme des résidus')
-    ax.set_xlabel('Résidus')
-    ax.set_ylabel('Densité')
+    ax.set_title('Residuals Histogram')
+    ax.set_xlabel('Residuals')
+    ax.set_ylabel('Density')
+
 
 def plot_scale_location(ax, fitted, residuals):
-    """Graphique : Scale-Location Plot"""
+    """Plot: Scale-Location Plot"""
     standardized_residuals = residuals / np.std(residuals)
     ax.scatter(fitted, np.sqrt(np.abs(standardized_residuals)), alpha=0.7)
     ax.axhline(0, color='red', linestyle='--', linewidth=1)
     ax.set_title('Scale-Location Plot')
-    ax.set_xlabel('Valeurs ajustées')
-    ax.set_ylabel('√(|Résidus standardisés|)')
+    ax.set_xlabel('Fitted Values')
+    ax.set_ylabel('√(|Standardized Residuals|)')
+
 
 # --- Fonction globale pour le panneau ---
 
 def plot_diagnostics(scenarios, output_directory):
     """
-    Génère et sauvegarde des graphiques de diagnostic pour une liste de scénarios.
+    Generates and saves diagnostic plots for a list of scenarios.
     
-    Les graphiques sont sauvegardés dans un sous-dossier 'diagnostic_plots' du répertoire de sortie.
-    Chaque graphique est numéroté en fonction de l'ordre des scénarios.
+    Plots are saved in a subfolder 'diagnostic_plots' inside the output directory.
+    Each plot is numbered according to the scenario order.
     
-    Arguments :
-    - scenarios : Liste de tuples (fitted, residuals), où fitted est une liste des valeurs ajustées 
-                  et residuals est une liste des résidus.
-    - output_directory : Répertoire dans lequel les graphiques seront sauvegardés.
+    Arguments:
+    - scenarios: List of tuples (fitted, residuals), where fitted is a list of fitted values
+                 and residuals is a list of residuals.
+    - output_directory: Directory where the plots will be saved.
     """
-    # Créer un sous-dossier "diagnostic_plots" dans le répertoire de sortie
+    # Create a "diagnostic_plots" subfolder in the output directory
     diagnostics_dir = os.path.join(output_directory, "diagnostic_plots")
     os.makedirs(diagnostics_dir, exist_ok=True)
 
+    # Compute the global y-axis limits for the top-left subplot (residuals vs fitted)
+    all_residues = np.concatenate([np.array(s.residues) for s in scenarios])
+    ymin, ymax = all_residues.min(), all_residues.max()
+
+    # Loop over each scenario to create the figures
     for idx, scenario in enumerate(scenarios):
-        # Créer la figure pour les diagnostics
-        fig, axs = plt.subplots(2, 2, figsize=(12, 10))  # 2x2 grilles
+        # Create the figure with a 2x2 grid
+        fig, axs = plt.subplots(2, 2, figsize=(12, 10))
         fitted = np.array(scenario.fitted_sfs)
         residues = np.array(scenario.residues)
-        # Appeler chaque fonction pour tracer les sous-graphiques
+
+        # Plot the top-left subplot with shared y-axis
         plot_residuals_vs_fitted(axs[0, 0], fitted, residues)
+        axs[0, 0].set_ylim(ymin, ymax)  # share the same y-axis across all scenarios
+
+        # Plot the other subplots
         plot_qq(axs[0, 1], residues)
         plot_histogram(axs[1, 0], residues)
         plot_scale_location(axs[1, 1], fitted, residues)
 
-        # Ajuster l'espacement entre les graphiques
+        # Adjust spacing between subplots
         plt.tight_layout()
 
-        # Sauvegarder la figure dans le sous-dossier
-        output_file = os.path.join(diagnostics_dir, f"diagnostic_plot_{idx + 1}.png")
+        # Save the figure in the subfolder
+        output_file = os.path.join(diagnostics_dir, f"diagnostic_plot_{idx + 1}_epochs.png")
         plt.savefig(output_file)
 
-        # Fermer la figure pour libérer la mémoire
+        # Close the figure to free memory
         plt.close(fig)
 
-    print(f"Tous les diagnostics ont été sauvegardés dans le dossier : {diagnostics_dir}")
+    # Confirmation message
+    print(f"All diagnostic plots have been saved in the folder: {diagnostics_dir}")
+
+
 
 
 def write_scenario_output(output_file, time_scale, scenarios, mu, l, generation_time):
@@ -577,7 +560,7 @@ def write_scenario_output(output_file, time_scale, scenarios, mu, l, generation_
             # Write likelihood and distance
             time, _ = convert_timeandtheta(time_scale, scenario)
             scenario.times =garder_doublons(time)
-            f.write(f"> {i + 1} blocks\n")
+            f.write(f"> {i + 1} epochs\n")
             f.write(f"lik : {scenario.likelihood} dist : {scenario.distance} aic : {scenario.aic}\n")
             
             # Line 1: Breakpoints in coalescent units (original input format)
