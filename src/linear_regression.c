@@ -352,8 +352,10 @@ Solution init_solution_size(int nb_breakpoints)
     sol.thetas = calloc(sizeof(double), (nb_breakpoints + 1)); // Allocate space for each interval’s mutation rate
     sol.se_thetas = NULL;
     sol.residues = NULL;
-    for (int i = 0; i < nb_breakpoints; i++)
+    for (int i = 0; i < nb_breakpoints; i++){
         sol.breakpoints[i] = i * GRIDREFINE + 1; // Initialize breakpoints as a simple sequence; this may be customized to represent actual change times
+    }
+        
     return sol;
 }
 
@@ -407,14 +409,23 @@ void clear_solution(Solution sol)
 void save_solution(Solution sol, SFS sfs, Time_gride tg ,char *out_file)
 {
     // Ensure the directory exists before proceeding
-    FILE *file = fopen(out_file, "a");
+    FILE *file;
+    if(sol.nb_breakpoints > 0)
+        file = fopen(out_file, "a");
+    else
+        file = fopen(out_file, "w");
+    double time = 0., lb =0.;
     thetas_se(&sol, sfs.sfs_length, tg);
     residues(&sol, tg, sfs);
-    fprintf(file, " >\n log_likelihood: %f ", sol.log_likelihood);
+    fprintf(file, " > %d epochs model \n log_likelihood: %f ", sol.nb_breakpoints + 1, sol.log_likelihood);
     fprintf(file, "\n distance: %f ", sol.distance);
-    fprintf(file, "\n breakpoints: ");
-    for (int i = 0; i < sol.nb_breakpoints; i++)
-        fprintf(file, "%d ", sol.breakpoints[i]);
+    fprintf(file, "\n time in unit of Ne generations: ");
+    for (int i = 0; i < sol.nb_breakpoints; i++){
+        time += (tg.time_scale[sol.breakpoints[i] - 1] - lb) * sol.thetas[i] / sol.thetas[0];
+        lb = tg.time_scale[sol.breakpoints[i] - 1];
+        fprintf(file, "%f ", time);
+        // printf("%d %d ", i, sol.breakpoints[i] - 1);
+    }
     fprintf(file, "\n thetas: ");
     for (int i = 0; i <= sol.nb_breakpoints; i++)
         fprintf(file, "%f ", sol.thetas[i] / sfs.training_size);

@@ -66,14 +66,13 @@ long double *init_wik(int n_sample, int sfs_length)
  * Generates a list of numbers logarithmically spaced between two given bounds, writes them to a file,
  * and returns them in a dynamically allocated array.
  *
- * @param filename The name of the file where the points will be saved.
  * @param min      The lower bound of the logarithmic scale (must be > 0).
  * @param max      The upper bound of the logarithmic scale (must be > min).
  * @param n        The number of points to generate (must be > 0).
  * @return         A pointer to the dynamically allocated array of points, or NULL if an error occurs.
  */
 // Function to generate a logarithmic scale with n+1 points, ensuring the last point is 2 if 2 < max.
-double* generate_logarithmic_scale(int grid_size, double upper_bound, double lower_bound, char *file_name) 
+double* generate_logarithmic_scale(int grid_size, double upper_bound, double lower_bound) 
 {
     // Calculate the actual number of points
     // Allocate memory for the points
@@ -82,28 +81,17 @@ double* generate_logarithmic_scale(int grid_size, double upper_bound, double low
         fprintf(stderr, "Memory allocation failed.\n");
         return NULL;
     }    
-    // Open the file for writing
-    FILE* file = fopen(file_name, "w");
-    if (!file) {
-        fprintf(stderr, "Failed to open the file.\n");
-        free(log_scale);
-        return NULL;
-    }
 
     // Generate logarithmic points
     double log_min = log10(lower_bound);
     double log_max = log10(upper_bound);
-    double step = (log_max - log_min) / (grid_size - 2);
+    double step = (log_max - log_min) / (grid_size - 1);
 
-    for (int i = 0; i < grid_size - 1; i++) {
+    for (int i = 0; i < grid_size; i++)
         log_scale[i] = pow(10, log_min + i * step);
-        fprintf(file, "%.10f\n", log_scale[i]);
-    }
 
     
-    log_scale[grid_size - 1] = log_scale[grid_size - 2] + 1.0;
-    fprintf(file, "%.10f\n", log_scale[grid_size - 1]);
-    fclose(file);
+    // log_scale[grid_size - 1] = log_scale[grid_size - 2] + 1.0;
     return log_scale;
 }
 
@@ -118,7 +106,7 @@ double* generate_logarithmic_scale(int grid_size, double upper_bound, double low
  * @param file_name  The name of the file where the points will be saved.
  * @return           A pointer to the dynamically allocated array of points, or NULL if an error occurs.
  */
-double* generate_linear_scale(int grid_size, double upper_bound, double lower_bound, char *file_name) 
+double* generate_linear_scale(int grid_size, double upper_bound, double lower_bound) 
 {
     // Allocate memory for the points
     double* linear_scale = malloc(grid_size * sizeof(double));
@@ -127,30 +115,17 @@ double* generate_linear_scale(int grid_size, double upper_bound, double lower_bo
         return NULL;
     }
 
-    // Open the file for writing
-    FILE* file = fopen(file_name, "w");
-    if (!file) {
-        fprintf(stderr, "Failed to open the file.\n");
-        free(linear_scale);
-        return NULL;
-    }
-
     // Generate linearly spaced points
     double step = (upper_bound - lower_bound) / (grid_size - 2);
 
     for (int i = 0; i < grid_size - 1; i++) {
         linear_scale[i] = lower_bound + i * step;
-        fprintf(file, "%.10f\n", linear_scale[i]);
     }
 
     // Ensure the last point is 2.0 (if it fits within the range)
     linear_scale[grid_size - 1] = 2.0;
-    fprintf(file, "%.10f\n", linear_scale[grid_size - 1]);
-
-    fclose(file);
     return linear_scale;
 }
-
 
 void save_cumulated_weight(int sfs_length, int grid_size, double **matrix, char *filename)
 {
@@ -299,7 +274,7 @@ void fold_time_grid(Time_gride *tg, SFS sfs)
         unfolded_size = (unfolded_size < sfs.troncation) ? unfolded_size : sfs.troncation; 
         for(int i = folded_size; i < unfolded_size; i ++)
         {
-            for (int j = 0; j < tg->grid_size * 1000 + 2; j++)
+            for (int j = 0; j < tg->grid_size * 1000 + 3; j++)
             {
                 if(!sfs.singleton && i == sfs.n_haplotypes - 2)
                     tg->cumulative_bl[sfs.n_haplotypes - 2 - i][j] = tg->cumulative_bl[i][j];
@@ -326,11 +301,11 @@ void erased_singleton_grid(Time_gride *tg, SFS sfs)
 }
 
 
-Time_gride init_time_grid(SFS sfs, int grid_size, double ub, double lb, char *outfile)
+Time_gride init_time_grid(SFS sfs, int grid_size, double ub, double lb)
 {
     Time_gride time_grid;
     time_grid.grid_size = grid_size;
-    time_grid.time_scale = generate_logarithmic_scale(grid_size * 1000 , ub, lb, outfile);
+    time_grid.time_scale = generate_logarithmic_scale(grid_size * 1000 + 1, ub, lb);
     int sfs_length = sfs.n_haplotypes - 1;
     if(sfs.troncation > 5)
         sfs_length = (sfs_length < sfs.troncation) ? sfs_length : sfs.troncation;
@@ -338,7 +313,7 @@ Time_gride init_time_grid(SFS sfs, int grid_size, double ub, double lb, char *ou
     time_grid.cumulative_bl = cumulatve_weight_v2(
         sfs.n_haplotypes,
         sfs_length,
-        grid_size * 1000,
+        grid_size * 1000 + 1,
         time_grid.time_scale
     );
     fold_time_grid(&time_grid, sfs);

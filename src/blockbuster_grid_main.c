@@ -69,9 +69,9 @@ int main(int argc, char *argv[])
     }
     double *H;
     if(scale)
-        H = generate_logarithmic_scale(grid_size, upper_bound, lower_bound, outputfile);
+        H = generate_logarithmic_scale(grid_size, upper_bound, lower_bound);
     else
-        H = generate_linear_scale(grid_size, upper_bound, lower_bound, outputfile);
+        H = generate_linear_scale(grid_size, upper_bound, lower_bound);
     // double ** weight_grid = cumulatve_weight_v2(n_sample, grid_size, H);
     Time_gride tg = init_time_grid_H(n_sample, grid_size, H);
     save_cumulated_weight(n_sample, grid_size + 2, tg.cumulative_bl, outputfile);

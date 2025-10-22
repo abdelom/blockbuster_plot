@@ -253,7 +253,7 @@ int main(int argc, char *argv[])
         args.lower_bound = 1. / (10 * sfs.n_haplotypes);
     if (args.recent > 0)
         args.lower_bound = 1. / (double)(args.recent * sfs.n_haplotypes);
-    Time_gride time_grid = init_time_grid(sfs, args.grid_size, args.upper_bound, args.lower_bound, outfile);
+    Time_gride time_grid = init_time_grid(sfs, args.grid_size, args.upper_bound, args.lower_bound);
     Flag flag = init_flag(sfs.sfs_length, args.theta_flag , args.theta_flag_count);
     clock_t start_time = clock(); // Start time measurement
     Solution *list_solution;
@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
     clock_t end_time = clock();                                                // End time measurement
     double cpu_time_used = ((double)(end_time - start_time)) / CLOCKS_PER_SEC; // Calculate the time in seconds
     
-    printf("Time taken for system resolution: %f seconds\n", cpu_time_used); // Print the elapsed time
+    printf("\n Time taken for system resolution: %f seconds\n", cpu_time_used); // Print the elapsed time
     // free_integral_grid(cumul_weight, n_sample);
 
     free(outfile);

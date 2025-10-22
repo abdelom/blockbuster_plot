@@ -68,7 +68,7 @@ Solution generate_brk_combinations(int nb_breakpoints, SFS sfs, Time_gride tg)
     // Initialize the solution with specified number of breakpoints
     Solution sol = init_solution_size(nb_breakpoints);
     // Set the last breakpoint to the grid limit (end boundary)
-    sol.breakpoints[nb_breakpoints] = GRIDREFINE * tg.grid_size + 1;
+    sol.breakpoints[nb_breakpoints] = GRIDREFINE * tg.grid_size + 2;
     // Flag for stopping the combination generation
     int arret = 1;
     // Calculate the initial solution with the given breakpoints
@@ -114,7 +114,7 @@ Solution generate_brk_combinations_f(int nb_breakpoints, SFS sfs, Time_gride tg,
     // Initialize the solution with specified number of breakpoints
     Solution sol = init_solution_size(nb_breakpoints);
     // Set the last breakpoint to the grid limit (end boundary)
-    sol.breakpoints[nb_breakpoints] = GRIDREFINE * tg.grid_size + 1;
+    sol.breakpoints[nb_breakpoints] = GRIDREFINE * tg.grid_size + 2;
     // Flag for stopping the combination generation
     int arret = 1;
     // Calculate the initial solution with the given breakpoints
@@ -217,6 +217,7 @@ void refine_solution_f(Solution *sol_initiale, SFS sfs, Time_gride tg, Flag flag
     {   
         for(int b = sol_initiale->nb_breakpoints - 1; b >= 0; b --)
         {
+            printf("%d \n", b);
             Solution solp = refine_solution_b_f(*sol_initiale, b, sfs, tg, -1, flag);
             Solution solm = refine_solution_b_f(*sol_initiale, b, sfs, tg, +1, flag);
             if(sol_initiale->log_likelihood < solm.log_likelihood)
@@ -234,6 +235,23 @@ void refine_solution_f(Solution *sol_initiale, SFS sfs, Time_gride tg, Flag flag
             clear_solution(solp);
             clear_solution(solm);
         }
+    }
+}
+
+void print_solution(Solution sol, Time_gride tg)
+{
+    // Ensure the directory exists before proceedin
+    printf(" log_likelihood: %f ", sol.log_likelihood);
+    double time = 0.0, lb = 0.0;
+      printf("\n thetas: ");
+    for (int i = 0; i <= sol.nb_breakpoints; i++)
+        printf("%f ", sol.thetas[i]);
+    printf("\n times in unit of Ne generations: ");
+    for (int i = 0; i < sol.nb_breakpoints; i++){
+        time += (tg.time_scale[sol.breakpoints[i] - 1] - lb) * sol.thetas[i] / sol.thetas[0];
+        lb = tg.time_scale[sol.breakpoints[i] - 1];
+        printf("%f ", time);
+        printf("%d ", sol.breakpoints[i]);
     }
 }
 
@@ -276,7 +294,8 @@ Solution *find_scenario(SFS sfs, Time_gride tg, int changes)
         {
             refine_solution(&liste_solution[nb_breakpoints], sfs, tg);
         }
-        printf("%d ", nb_breakpoints);
+        printf("\n >  %d epochs model: \n", nb_breakpoints + 1);
+        print_solution(liste_solution[nb_breakpoints], tg);
         nb_breakpoints++;
     }
     // thetas_se(&liste_solution[0], sfs_length, cumul_weight);
@@ -324,7 +343,7 @@ Solution *find_scenario_f(SFS sfs, Time_gride tg, int changes, Flag flag)
         {
             refine_solution_f(&liste_solution[0], sfs, tg, flag);
         }
-        printf("%d ", nb_breakpoints);
+        printf("%d aa\n", nb_breakpoints);
         // nb_breakpoints++;
     // }
     // thetas_se(&liste_solution[0], sfs_length, cumul_weight);

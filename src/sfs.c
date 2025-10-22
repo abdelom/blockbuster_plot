@@ -283,8 +283,8 @@ SFS int_sfs(char *sfs_file, int oriented, int troncation, int singleton, int num
     if(num_blocks == 1)
         sfs.training_size = 1.;
     sfs.test = test_split(sfs, num_blocks);
-    for (int i = 0; i < sfs.sfs_length; i++)
-        printf("%f %f \n", sfs.training[i], sfs.test[i]);
+    // for (int i = 0; i < sfs.sfs_length; i++)
+    //     printf("%f %f \n", sfs.training[i], sfs.test[i]);
     return sfs;
 }
 

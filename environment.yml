@@ -9,6 +9,8 @@ dependencies:
   - matplotlib
   - statsmodels  # Added statsmodels package
   - seaborn
+  - demes
+  - demesdraw
 
   # C Compiler and dependencies
   - gcc
