@@ -2,7 +2,7 @@
 
 ## Overview
 
-Blokbuster is a software tool designed to infer past population size changes based on Site Frequency Spectrum (SFS) data. It combines a C program (`blockbuster_main.c`) that processes the SFS and a Python script that visualizes and analyzes the results.
+Blokbuster is a software tool designed to infer historical population size changes from Site Frequency Spectrum (SFS) data. It consists of a C program (blockbuster_main.c) for performing the inference and a Python script for visualizing and analyzing the inferred demographic models.
 
 ## Requirements
 
