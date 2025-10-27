@@ -207,13 +207,10 @@ double log_likelihood(SFS sfs, System system, Solution *sol, double * sfs_theo, 
     double *sfs_theo2 = SFS_to_freq(sfs_theo, system, sfs.sfs_length); // Convert theoretical SFS to frequencies
     // Calculate the log likelihood
     double time = 0.0, lb = 0.0, delta_time = 0.0;
-    // for (int i = 0; i <= sol -> nb_breakpoints; i ++)
-    // {
     if(sol->thetas[sol -> nb_breakpoints] < 1e4)
         return -INFINITY;
     if(sol->thetas[0] < 1e4)
         return -INFINITY;
-    //  }
     for (int i = 0; i < sol -> nb_breakpoints; i ++)
     {
         delta_time = (tg.time_scale[sol->breakpoints[i] - 1] - lb) * sol->thetas[i] / sol->thetas[0];
