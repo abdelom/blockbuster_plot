@@ -17,11 +17,6 @@
  * @return A dynamically allocated array of doubles containing the SFS data from the file. The caller is
  *         responsible for freeing this memory.
  *
- * Example usage:
- *     int size;
- *     double *sfs = readSFSFromFile("sfs_data.txt", &size);
- *     // Use `sfs` array here
- *     free(sfs);  // Free the allocated memory when done
  */
 double *readSFSFromFile(const char *filename, int *size)
 {
@@ -58,113 +53,85 @@ double *readSFSFromFile(const char *filename, int *size)
 
 
 /**
- * Modifies the system for analyses when the SFS is folded. This occurs when alleles are not oriented.
- * The folding process combines the first half of the SFS with the second half and adjusts the cumulative weights accordingly.
+ * @brief Folds a Site Frequency Spectrum (SFS) to account for unpolarized data.
  *
- * @param sfs               Pointer to a 2D array where:
- *                           - sfs[0] is the observed Site Frequency Spectrum (SFS).
- * @param cumulative_weight Pointer to a 2D array of cumulative weights used in regression.
- * @param sfs_length        Length of the SFS, representing the number of observations.
- * @param grid_size         Size of the grid for cumulative weights.
+ * This function combines the first half of the SFS with the second half
+ * (mirrored), effectively folding the spectrum. If the length is odd,
+ * the middle bin is preserved. The training array is resized accordingly.
  *
- * This function folds the SFS by adding the second half of the SFS to the first half and adjusting the cumulative weights
- * accordingly to account for the absence of allele orientation.
+ * @param sfs Pointer to the SFS structure to modify.
  */
-
- void fold_sfs(SFS *sfs)
+void fold_sfs(SFS *sfs)
 {
     int n = sfs->sfs_length;
 
-    // Combiner la première moitié avec la deuxième
+    // Combine first half with mirrored second half
     for (int i = 0; i < n / 2; i++) {
         sfs->training[i] += sfs->training[n - 1 - i];
     }
 
-    // Nouvelle taille (moitié + reste si n est impair)
+    // Compute new size (half plus middle if n is odd)
     int new_size = n / 2 + n % 2;
 
-    // Réallouer training (et test si nécessaire)
+    // Reallocate training array to the new size
     sfs->training = realloc(sfs->training, new_size * sizeof(double));
-    // sfs->test     = realloc(sfs->test,     new_size * sizeof(double));
+    // Optionally, realloc test array if needed:
+    // sfs->test = realloc(sfs->test, new_size * sizeof(double));
 
     sfs->sfs_length = new_size;
 }
 
-
+/**
+ * @brief Replaces specific bins in the training SFS with 0 according to preprocessing rules.
+ *
+ * This function sets the first bin (singleton) to 0 if singletons are to be ignored.
+ * It also zeroes out bins beyond the truncation threshold if truncation is applied.
+ *
+ * @param sfs Pointer to the SFS structure to modify.
+ */
 void replace_with_0(SFS *sfs)
 {
-    if(!sfs->singleton)
-        sfs->training[0] = 0.;
-    if(sfs->troncation && sfs->troncation < sfs->sfs_length && sfs->troncation > 5)
+    // Set singleton bin to 0 if singletons are ignored
+    if (!sfs->singleton)
+        sfs->training[0] = 0.0;
+
+    // Set bins beyond the truncation point to 0
+    if (sfs->troncation && sfs->troncation < sfs->sfs_length && sfs->troncation > 5)
     {
-        for(int i = sfs->troncation; i < sfs->sfs_length; i ++)
-            sfs->training[i] = 0.;
+        for (int i = sfs->troncation; i < sfs->sfs_length; i++)
+            sfs->training[i] = 0.0;
     }
 }
 
-// void fold_sfs(SFS sfs, int grid_size)
-// {
-//     for (int i = 0; i < sfs.sfs_length / 2; i++)
-//     {
-//         // Combine the corresponding elements from the first and second halves of the SFS
-//         sfs.training[i] += sfs.training[sfs.sfs_length - 1 - i];
-
-//         // Adjust cumulative weights accordingly
-//         // for (int j = 0; j < grid_size + 2; j++)
-//         //     cumulative_weight[i][j] += cumulative_weight[sfs_length - 1 - i][j];
-//     }
-//     sfs.sfs_length = sfs.sfs_length / 2 + sfs.sfs_length % 2;
-//     // cumulative_weight = realloc(cumulative_weight, sfs_length/2 + sfs_length%2);
-// }
-
 
 /**
- * Modifies the system for analyses when the SFS is folded. This occurs when alleles are not oriented.
- * The folding process combines the first half of the SFS with the second half and adjusts the cumulative weights accordingly.
+ * @brief Removes the singleton bin from the training SFS if its value is 0.
  *
- * @param sfs               Pointer to a 2D array where:
- *                           - sfs[0] is the observed Site Frequency Spectrum (SFS).
- * @param cumulative_weight Pointer to a 2D array of cumulative weights used in regression.
- * @param sfs_length        Length of the SFS, representing the number of observations.
- * @param grid_size         Size of the grid for cumulative weights.
+ * This function shifts all values in the training SFS to the left to remove
+ * the first bin (singleton), reallocates the array to the new size,
+ * and updates the sfs_length accordingly.
  *
- * This function folds the SFS by adding the second half of the SFS to the first half and adjusting the cumulative weights
- * accordingly to account for the absence of allele orientation.
+ * @param sfs Pointer to the SFS structure to modify.
  */
- void singleton_erased(SFS *sfs)
+void singleton_erased(SFS *sfs)
 {
     int n = sfs->sfs_length;
 
-    // Décaler les valeurs (effacer le singleton)
-    if(sfs->training[0] == 0)
-        {
-            for (int i = 0; i < n - 1; i++)
+    // Check if the first bin (singleton) is 0
+    if (sfs->training[0] == 0)
+    {
+        // Shift all values to the left to remove the singleton
+        for (int i = 0; i < n - 1; i++)
             sfs->training[i] = sfs->training[i + 1];
 
-            // Réallocation avec la nouvelle taille
-            sfs->training = realloc(sfs->training, (n - 1) * sizeof(double));
-            // Mettre à jour la longueur
-            sfs->sfs_length = n - 1;
-        }
+        // Reallocate memory for the reduced array
+        sfs->training = realloc(sfs->training, (n - 1) * sizeof(double));
+
+        // Update the SFS length
+        sfs->sfs_length = n - 1;
+    }
 }
 
-// void singleton_erased(SFS sfs)
-// {
-//     int n = sfs.sfs_length;
-
-//     for (int i = 0; i < n - 1; i++)
-//         *(sfs.training)[i] = *(sfs.training)[i + 1];
-//     //     for (int j = 0; j < grid_size + 2; j++)
-//     //         (*cumulative_weight)[i][j] = (*cumulative_weight)[i + 1][j];
-//     // }
-
-//     // Ajustement des tailles
-//     // *cumulative_weight = realloc(*cumulative_weight, (n - 1) * sizeof(double *));
-//     *(sfs.training) = realloc((*(sfs.training), (n - 1) * sizeof(double));
-//     *(sfs.test) = realloc((*(sfs.test), (n - 1) * sizeof(double));
-
-//     sfs.sfs_length = n - 1;
-// }
 
 // Fonction de comparaison pour qsort
 int comparer(const void *a, const void *b)
@@ -259,32 +226,59 @@ double *test_split(SFS sfs, int frac)
     return sfs_test;
 }
 
+
+/**
+ * @brief Initializes an SFS structure from a file and applies preprocessing steps.
+ *
+ * This function reads the SFS from the input file, applies optional folding,
+ * truncation, singleton removal, and splits it into training and test sets.
+ *
+ * @param sfs_file      Path to the input SFS file.
+ * @param oriented      1 if the SFS is oriented, 0 if it should be folded.
+ * @param troncation    Maximum number of bins to keep (if truncation is applied).
+ * @param singleton     1 to keep singletons, 0 to ignore them.
+ * @param num_blocks    Number of blocks for splitting the SFS into training/test sets.
+ *
+ * @return An initialized SFS structure containing training and test arrays and metadata.
+ */
 SFS int_sfs(char *sfs_file, int oriented, int troncation, int singleton, int num_blocks)
 {
     SFS sfs;
+
+    // Initialize basic parameters
     sfs.sfs_length = 0;
-    sfs.troncation = troncation;
-    sfs.oriented = oriented;
-    sfs.singleton = singleton;
-    // Lecture du fichier et application des opérations sur SFS
+    sfs.troncation = troncation;       // If truncation = k, only the first k bins are kept
+    sfs.oriented = oriented;           // 1 = oriented, 0 = folded/unoriented
+    sfs.singleton = singleton;         // 1 = singletons included, 0 = ignored
+
+    // Read SFS from file
     sfs.training = readSFSFromFile(sfs_file, &(sfs.sfs_length));
-    sfs.n_haplotypes = sfs.sfs_length + 1; // n_sample doit être spécifié
-    replace_with_0(&sfs);
-    if(!oriented)
-        fold_sfs(&sfs);
-    if(troncation && troncation <  sfs.sfs_length && troncation > 5){
-        // sfs_troncation(sfs, cumul_weight, size, args.grid_size * GRIDREFINE, args.troncation);
+    sfs.n_haplotypes = sfs.sfs_length + 1; // Sample size
+
+    // Preprocessing steps
+    replace_with_0(&sfs);             // Replace ignored bins with 0
+    if (!oriented)
+        fold_sfs(&sfs);               // Fold the SFS if unoriented
+
+    // Apply truncation if requested
+    if (troncation && troncation < sfs.sfs_length && troncation > 5)
+    {
         sfs.sfs_length = troncation;
         sfs.training = realloc(sfs.training, sfs.sfs_length * sizeof(double));
     }
-    if(!singleton)
+
+    // Remove singleton bin if requested
+    if (!singleton)
         singleton_erased(&sfs);
-    sfs.training_size = 1. - 1. / (double) num_blocks;
-    if(num_blocks == 1)
-        sfs.training_size = 1.;
+
+    // Determine training size proportion
+    sfs.training_size = 1.0 - 1.0 / (double) num_blocks;
+    if (num_blocks == 1)
+        sfs.training_size = 1.0;
+
+    // Split SFS into training and test sets
     sfs.test = test_split(sfs, num_blocks);
-    // for (int i = 0; i < sfs.sfs_length; i++)
-    //     printf("%f %f \n", sfs.training[i], sfs.test[i]);
+
     return sfs;
 }
 

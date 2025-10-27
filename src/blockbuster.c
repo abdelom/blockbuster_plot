@@ -66,7 +66,7 @@ int recursive_bk_combination(int *brk, int nb_breakpoints, int grid_size)
 Solution generate_brk_combinations(int nb_breakpoints, SFS sfs, Time_gride tg)
 {
     // Initialize the solution with specified number of breakpoints
-    Solution sol = init_solution_size(nb_breakpoints);
+    Solution sol = init_solution_size(nb_breakpoints, GRIDREFINE);
     // Set the last breakpoint to the grid limit (end boundary)
     sol.breakpoints[nb_breakpoints] = GRIDREFINE * tg.grid_size + 2;
     // Flag for stopping the combination generation
@@ -94,7 +94,6 @@ Solution generate_brk_combinations(int nb_breakpoints, SFS sfs, Time_gride tg)
 }
 
 
-
 /**
  * Generates and evaluates all possible breakpoint combinations to find the optimal solution
  * with the highest log-likelihood, saving each intermediate solution and returning the best one.
@@ -112,7 +111,7 @@ Solution generate_brk_combinations(int nb_breakpoints, SFS sfs, Time_gride tg)
 Solution generate_brk_combinations_f(int nb_breakpoints, SFS sfs, Time_gride tg, Flag f)
 {
     // Initialize the solution with specified number of breakpoints
-    Solution sol = init_solution_size(nb_breakpoints);
+    Solution sol = init_solution_size(nb_breakpoints, GRIDREFINE);
     // Set the last breakpoint to the grid limit (end boundary)
     sol.breakpoints[nb_breakpoints] = GRIDREFINE * tg.grid_size + 2;
     // Flag for stopping the combination generation
@@ -217,7 +216,6 @@ void refine_solution_f(Solution *sol_initiale, SFS sfs, Time_gride tg, Flag flag
     {   
         for(int b = sol_initiale->nb_breakpoints - 1; b >= 0; b --)
         {
-            printf("%d \n", b);
             Solution solp = refine_solution_b_f(*sol_initiale, b, sfs, tg, -1, flag);
             Solution solm = refine_solution_b_f(*sol_initiale, b, sfs, tg, +1, flag);
             if(sol_initiale->log_likelihood < solm.log_likelihood)
@@ -242,16 +240,13 @@ void print_solution(Solution sol, Time_gride tg)
 {
     // Ensure the directory exists before proceedin
     printf(" log_likelihood: %f ", sol.log_likelihood);
-    double time = 0.0, lb = 0.0;
       printf("\n thetas: ");
     for (int i = 0; i <= sol.nb_breakpoints; i++)
         printf("%f ", sol.thetas[i]);
     printf("\n times in unit of Ne generations: ");
     for (int i = 0; i < sol.nb_breakpoints; i++){
-        time += (tg.time_scale[sol.breakpoints[i] - 1] - lb) * sol.thetas[i] / sol.thetas[0];
-        lb = tg.time_scale[sol.breakpoints[i] - 1];
-        printf("%f ", time);
-        printf("%d ", sol.breakpoints[i]);
+        printf("%f ", sol.time[i]);
+        // printf("%d ", sol.breakpoints[i]);
     }
 }
 
@@ -279,14 +274,14 @@ void print_solution(Solution sol, Time_gride tg)
  *    - Use `generate_brk_combinations` to compute the best solution for each number of breakpoints.
  * 4. Return the array of solutions for all configurations.
  */
-Solution *find_scenario(SFS sfs, Time_gride tg, int changes)
+Solution *find_scenario(SFS sfs, Time_gride tg, int epochs)
 {
     // Allocate memory for storing solutions for all configurations of breakpoints
-    Solution *liste_solution = malloc(sizeof(Solution) * (changes + 1));
+    Solution *liste_solution = malloc(sizeof(Solution) * epochs);
 
-    // Iterate through the number of breakpoints from 0 to `changes`
+    // Iterate through the number of epochs from 1 to `epochs`
     int nb_breakpoints = 0;
-    while (nb_breakpoints <= changes)
+    while (nb_breakpoints < epochs)
     {
         // Generate the best solution for the current number of breakpoints
         liste_solution[nb_breakpoints] = generate_brk_combinations(nb_breakpoints, sfs, tg);
@@ -295,6 +290,7 @@ Solution *find_scenario(SFS sfs, Time_gride tg, int changes)
             refine_solution(&liste_solution[nb_breakpoints], sfs, tg);
         }
         printf("\n >  %d epochs model: \n", nb_breakpoints + 1);
+        convert_times(&liste_solution[nb_breakpoints], tg, sfs);
         print_solution(liste_solution[nb_breakpoints], tg);
         nb_breakpoints++;
     }
@@ -328,27 +324,23 @@ Solution *find_scenario(SFS sfs, Time_gride tg, int changes)
  *    - Use `generate_brk_combinations` to compute the best solution for each number of breakpoints.
  * 4. Return the array of solutions for all configurations.
  */
-Solution *find_scenario_f(SFS sfs, Time_gride tg, int changes, Flag flag)
+Solution *find_scenario_f(SFS sfs, Time_gride tg, Flag flag)
 {
     // Allocate memory for storing solutions for all configurations of breakpoints
     Solution *liste_solution = malloc(sizeof(Solution) * (1));
 
     // // Iterate through the number of breakpoints from 0 to `changes`
     int nb_breakpoints = flag.n_theta - 1;
-    // while (nb_breakpoints <= changes)
-    // {
-        // Generate the best solution for the current number of breakpoints
-        liste_solution[0] = generate_brk_combinations_f(nb_breakpoints, sfs, tg, flag);
-        if (nb_breakpoints >= 1)
-        {
-            refine_solution_f(&liste_solution[0], sfs, tg, flag);
-        }
-        printf("%d aa\n", nb_breakpoints);
-        // nb_breakpoints++;
-    // }
-    // thetas_se(&liste_solution[0], sfs_length, cumul_weight);
-    // residues(&liste_solution[0], cumul_weight, sfs_length, sfs[0]);
-    // Return the list of solutions
+
+    // Generate the best solution for the current number of breakpoints
+    liste_solution[0] = generate_brk_combinations_f(nb_breakpoints, sfs, tg, flag);
+    if (nb_breakpoints >= 1)
+    {
+        refine_solution_f(&liste_solution[0], sfs, tg, flag);
+    }
+    convert_times(&liste_solution[0], tg, sfs);
+    // printf("%d aa\n", nb_breakpoints);
+
     return liste_solution;
 }
 

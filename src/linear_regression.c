@@ -116,14 +116,16 @@ void regressor_matrix(int n, int m, double *weight, double *regressors)
 // - size_t n: The number of elements in the vector.
 //
 // Complexity: O(n), where n is the size of the vector.
-void replace_negative_with_1(double *theta, size_t n)
-{
-    for (size_t i = 0; i < n; i++) // Iterate through each element of the vector.
-    {
-        if (theta[i] < 1e4) // Check if the current value is negative.
-            theta[i] = 5e8; // Replace the negative value with 1.
-    }
-}
+// void replace_negative_with_1(double *theta, size_t n)
+// {
+//     for (size_t i = 0; i < n; i++) // Iterate through each element of the vector.
+//     {
+//         if (theta[i] < 1e4) // Check if the current value is negative.
+//             theta[i] = 5e8; // Replace the negative value with 1.
+//     }
+// }
+
+
 
 /**
  * Computes the theoretical Site Frequency Spectrum (SFS) based on estimated population mutation rates and regression weights.
@@ -199,13 +201,36 @@ double *SFS_to_freq(double *sfs_theo, System system, int sfs_length)
  * 1. Convert the theoretical SFS from counts to frequencies using the SFS_to_freq function.
  * 2. Compute the log likelihood by summing the product of the observed counts and the logarithm of the theoretical frequencies.
  */
-double log_likelihood(SFS sfs, System system, Solution *sol, double * sfs_theo)
+double log_likelihood(SFS sfs, System system, Solution *sol, double * sfs_theo, Time_gride tg)
 {
     double llikelihood = 0;                       // Variable to hold the calculated log likelihood
     double *sfs_theo2 = SFS_to_freq(sfs_theo, system, sfs.sfs_length); // Convert theoretical SFS to frequencies
     // Calculate the log likelihood
+    double time = 0.0, lb = 0.0, delta_time = 0.0;
+    // for (int i = 0; i <= sol -> nb_breakpoints; i ++)
+    // {
+    if(sol->thetas[sol -> nb_breakpoints] < 1e4)
+        return -INFINITY;
+    if(sol->thetas[0] < 1e4)
+        return -INFINITY;
+    //  }
+    for (int i = 0; i < sol -> nb_breakpoints; i ++)
+    {
+        delta_time = (tg.time_scale[sol->breakpoints[i] - 1] - lb) * sol->thetas[i] / sol->thetas[0];
+        // if(delta_time < 0)
+        
+        if(time > 0. && (delta_time / time < 1e-1)) 
+        {
+            return -INFINITY;
+        }
+        time += delta_time ;
+        lb = tg.time_scale[sol->breakpoints[i] - 1];
+
+    }
     for (int i = 0; i < sfs.sfs_length; i++)
-        llikelihood += (sfs.test[i] * log(sfs_theo2[i]));
+        llikelihood += (sfs.test[i] * log10(sfs_theo2[i]));
+    // for (int i = 1; i <= sol -> nb_breakpoints; i ++)
+    //     llikelihood += - 1 * fabs(log10(sol->thetas[i] / sol->thetas[i-1]));
     free(sfs_theo2);
     return llikelihood; // Return the computed log likelihood
 }
@@ -316,9 +341,9 @@ void system_resolution(Solution *sol, SFS sfs, Time_gride tg)
     // Step 4: Estimate population mutation rates (thetas) using matrix multiplication (X^T X)-1X^T * SFS
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                 system.n_col, 1, sfs.sfs_length, 1.0, regressors, sfs.sfs_length, sfs.training, 1, 0.0, sol->thetas, 1);
-    replace_negative_with_1(sol->thetas, system.n_col); // if thetas are negatives they are replaced by 1 as population sizes cannot be inferior to 0
+    // replace_negative_with_1(sol->thetas, system.n_col); // if thetas are negatives they are replaced by 1 as population sizes cannot be inferior to 0
     double *sfs_theo = SFS_theo(sol->thetas, system, sfs.sfs_length);
-    sol->log_likelihood = log_likelihood(sfs, system, sol, sfs_theo);
+    sol->log_likelihood = log_likelihood(sfs, system, sol, sfs_theo, tg);
     sol->distance = distance(sfs.training, sfs_theo, sfs.sfs_length);
     free(system.weight);
     free(sfs_theo);    // Free the memory allocated for the frequency SFS
@@ -326,47 +351,22 @@ void system_resolution(Solution *sol, SFS sfs, Time_gride tg)
 }
 
 
-// // Function to initialize an empty solution with minimal allocation
-// Solution init_solution()
-// {
-//     Solution sol;
-//     sol.thetas = malloc(sizeof(double)); // Allocate memory for a single mutation rate (could be resized later)
-//     sol.breakpoints = NULL;              // No breakpoints initially, as no changes are assumed
-//     sol.nb_breakpoints = 0;              // Start with zero size changes, making this an empty or in#include <lapacke.h>
-//     sol.log_likelihood = 0;              // Initialize likelihood to zero, to be calculated after SFS fitting
-//     sol.distance = 0;                    // Initialize distance to zero, to be calculated later
-//     sol.se_thetas = NULL;
-//     sol.residues = NULL;
-//     sol.fitted_sfs = NULL;
-//     // sol.AIC = 0;                           // Optional: AIC initialization, could be implemented for model comparison
-//     return sol;
-// }
-
 // Function to initialize a solution with a specified number of breakpoints
-Solution init_solution_size(int nb_breakpoints)
+Solution init_solution_size(int nb_breakpoints, int gridrefine)
 {
     Solution sol;
     sol.nb_breakpoints = nb_breakpoints;
     // Allocate memory for `nb_breakpoints + 1` to include initial and final states or boundaries, the last one corespond to the infinity
     sol.breakpoints = calloc(sizeof(int), (nb_breakpoints + 1));
     sol.thetas = calloc(sizeof(double), (nb_breakpoints + 1)); // Allocate space for each interval’s mutation rate
-    sol.se_thetas = NULL;
-    sol.residues = NULL;
+
     for (int i = 0; i < nb_breakpoints; i++){
-        sol.breakpoints[i] = i * GRIDREFINE + 1; // Initialize breakpoints as a simple sequence; this may be customized to represent actual change times
+        sol.breakpoints[i] = i * gridrefine + 1; // Initialize breakpoints as a simple sequence; this may be customized to represent actual change times
     }
         
     return sol;
 }
 
-// solution init_solution_flaged(solution sol, int nb_fixed_theta)
-// {
-//     solution solution_f;
-//     solution_f.thetas = malloc(sizeof(double) * (sol.nb_breakpoints + 1 - nb_fixed_theta));
-//     solution_f.nb_breakpoints = sol.nb_breakpoints;
-//     solution_f.breakpoints = malloc(sizeof(int) * sol.nb_breakpoints);
-//     return solution_f;
-// }
 
 // Function to copy an existing solution into a new structure
 Solution copy_solution(Solution sol)
@@ -406,29 +406,44 @@ void clear_solution(Solution sol)
  * @param sol      The solution structure containing model parameters.
  * @param n_sample Sample size, used for normalizing the time values.
  */
-void save_solution(Solution sol, SFS sfs, Time_gride tg ,char *out_file)
+void save_solution(Solution sol, SFS sfs, Time_gride tg , char *out_file, double mut, double gen_time, double genome_length)
 {
     // Ensure the directory exists before proceeding
+    double * effective_Ne = calloc(sol.nb_breakpoints + 1, sizeof(double));
     FILE *file;
     if(sol.nb_breakpoints > 0)
         file = fopen(out_file, "a");
     else
         file = fopen(out_file, "w");
-    double time = 0., lb =0.;
     thetas_se(&sol, sfs.sfs_length, tg);
     residues(&sol, tg, sfs);
     fprintf(file, " > %d epochs model \n log_likelihood: %f ", sol.nb_breakpoints + 1, sol.log_likelihood);
     fprintf(file, "\n distance: %f ", sol.distance);
-    fprintf(file, "\n time in unit of Ne generations: ");
-    for (int i = 0; i < sol.nb_breakpoints; i++){
-        time += (tg.time_scale[sol.breakpoints[i] - 1] - lb) * sol.thetas[i] / sol.thetas[0];
-        lb = tg.time_scale[sol.breakpoints[i] - 1];
-        fprintf(file, "%f ", time);
-        // printf("%d %d ", i, sol.breakpoints[i] - 1);
-    }
     fprintf(file, "\n thetas: ");
     for (int i = 0; i <= sol.nb_breakpoints; i++)
         fprintf(file, "%f ", sol.thetas[i] / sfs.training_size);
+    if(mut > 0 && genome_length > 0){
+        fprintf(file, "\n Effective size: ");
+        for(int i = 0; i <= sol.nb_breakpoints; i++){
+            effective_Ne[i] = sol.thetas[i] / (4. * mut * genome_length * sfs.training_size);
+            fprintf(file, "%f ", effective_Ne[i]);
+        }
+    }
+    fprintf(file, "\n time in unit of Ne generations: ");
+    for (int i = 0; i < sol.nb_breakpoints; i++)
+        fprintf(file, "%f ", sol.time[i]);
+    if(mut > 0 && genome_length > 0){
+        fprintf(file, "\n time in generations: ");
+        for(int i = 0; i < sol.nb_breakpoints; i++){
+             fprintf(file, "%f ", sol.time[i] * effective_Ne[0]);
+        }
+         if(gen_time > 0){
+        fprintf(file, "\n time in years: ");
+        for(int i = 0; i < sol.nb_breakpoints; i++){
+             fprintf(file, "%f ", sol.time[i] * effective_Ne[0] * gen_time);
+        }
+    }
+    }
     if (sol.se_thetas != NULL)
     {
         fprintf(file, "\n se_thetas: ");
@@ -452,5 +467,18 @@ void save_solution(Solution sol, SFS sfs, Time_gride tg ,char *out_file)
     free(sol.residues);
     free(sol.se_thetas);
     free(sol.fitted_sfs);
-    // clear_solution(sol);
+    free(sol.time);    // clear_solution(sol);
+}
+
+void convert_times(Solution *sol, Time_gride tg, SFS sfs)
+{
+    double time = 0.0, lb = 0.0, delta_time = 0.0;
+    sol-> time = calloc(sol->nb_breakpoints, sizeof(double));
+    for (int i = 0; i < sol -> nb_breakpoints; i ++)
+    {
+        delta_time = (tg.time_scale[sol->breakpoints[i] - 1] - lb) * sol->thetas[i] / sol->thetas[0];
+        time += delta_time ;
+        lb = tg.time_scale[sol->breakpoints[i] - 1];
+        sol -> time[i] = time;
+    }
 }

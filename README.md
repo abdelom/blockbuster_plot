@@ -1,4 +1,4 @@
-# blockbuster plot
+# Blockbuster
 
 ## Overview
 
@@ -14,6 +14,8 @@ Python:
 - Python 3.8 or newer
 - NumPy
 - Matplotlib
+- demes
+- demesdraw
 
 C Compiler and Build Tools:
 - GCC (or appropriate compiler for your platform)
@@ -42,14 +44,6 @@ After the environment is created, activate it with:
 
 conda activate blockbuster_env
 
-3. Build the C Program
-
-The C program `blockbuster_main.c` is located in the `./src/` directory. To build it, use the `Makefile` provided, or run the following commands:
-
-cd src
-make
-
-This will generate the executable `blockbuster_main` in the `./bin/` directory.
 
 4. Format the entry file
 
@@ -90,6 +84,9 @@ python parsandplot.py -i <input_file> -o <output_directory> -L <genome_length> -
 - `-L`: Genome length (default: -1).
 - `-m`: Mutation rate (default: -1).
 - `-g`: Generation time in years (default: -1).
+
+
+6. Output
 
 ## License
 

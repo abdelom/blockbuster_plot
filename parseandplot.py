@@ -5,14 +5,14 @@ import argparse
 from matplotlib.ticker import FuncFormatter
 import statsmodels.api as sm
 import seaborn as sns
-import demes
-import demesdraw
 import numpy as np
 from scipy.stats import chi2
+import demes
+import demesdraw
 
 
 class Scenario:
-    def __init__(self, likelihood, distance, times_ne, theta, se_thetas, residues, fitted_sfs):
+    def __init__(self, likelihood, distance, times_ne, theta, se_thetas, residues, fitted_sfs, Ne, times_g, times_y):
         self.likelihood = likelihood  # La vraisemblance du SFS observé
         self.distance = distance  # La distance entre SFS observé et théorique
         self.times = times_ne  # Les indices associés aux temps
@@ -23,9 +23,9 @@ class Scenario:
         self.residues = residues  # Les résidus entre le SFS observé et ajusté
         self.fitted_sfs = fitted_sfs  # Le SFS ajusté
 
-        self.effective_sizes = []  # Les tailles de population effective (Ne)
-        self.times_generations = []  # Les temps exprimés en générations
-        self.times_years = []  # Les temps exprimés en années (si applicable)
+        self.effective_sizes = Ne  # Les tailles de population effective (Ne)
+        self.times_generations = times_g  # Les temps exprimés en générations
+        self.times_years = times_y  # Les temps exprimés en années (si applicable)
         self.aic = self.calculate_aic()
 
     def calculate_aic(self):
@@ -70,8 +70,8 @@ def parse_arguments():
     parser.add_argument("-o", "--output", required=True, type=str, help="Directory to save the plot.")
     
     # Nouveaux arguments optionnels
-    parser.add_argument("-mu", "--mutation_rate", type=float, default=-1, help="Mutation rate per site per generation (default: -1)")
-    parser.add_argument("-l", "--genome_length", type=float, default=-1, help="Genome length (default: -1)")
+    # parser.add_argument("-mu", "--mutation_rate", type=float, default=-1, help="Mutation rate per site per generation (default: -1)")
+    # parser.add_argument("-l", "--genome_length", type=float, default=-1, help="Genome length (default: -1)")
     parser.add_argument("-g", "--generation_time", type=float, default=-1, help="Generation time (default: -1)")
     
     # Nouvel argument pour les données de courbe constante par morceaux
@@ -115,6 +115,9 @@ def parse_document(file_path):
                 se_thetas = []
                 residues = []
                 fitted_sfs = []
+                Ne = []
+                times_g = []
+                times_y = []
                 theta = None  # Valeur de theta globale (s'il est spécifié dans le fichier)
                 
                 # Parcourir les lignes suivantes pour lire les données associées au scénario
@@ -127,10 +130,16 @@ def parse_document(file_path):
                         likelihood = float(next_line.split(":")[-1].strip())
                     elif next_line.startswith("distance"):
                         distance = float(next_line.split(":")[-1].strip())
-                    elif next_line.startswith("time"):
+                    elif next_line.startswith("time in unit of Ne generations"):
                         times_ne = list(map(float,next_line.strip().split()[6:]))
+                    elif next_line.startswith("time in generations"):
+                        times_g = list(map(float,next_line.strip().split()[3:]))
+                    elif next_line.startswith("time in years"):
+                        times_y = list(map(float,next_line.strip().split()[3:]))
                     elif next_line.startswith("thetas"):
                         theta = list(map(float, next_line.strip().split()[1:]))
+                    elif next_line.startswith("Effective size"):
+                        Ne = list(map(float, next_line.strip().split()[2:]))
                     elif next_line.startswith("residues"):
                         residues = list(map(float, next_line.strip().split()[1:]))
                     elif next_line.startswith("fitted_sfs"):
@@ -141,8 +150,9 @@ def parse_document(file_path):
 
 
                 # Créer un objet Scenario avec les nouveaux arguments
+            
                 scenario = Scenario(
-                    likelihood, distance, times_ne, theta, se_thetas, residues, fitted_sfs
+                    likelihood, distance, times_ne, theta, se_thetas, residues, fitted_sfs, Ne, times_g, times_y
                 )
                
                # scenario.calculate_aic()  # Si applicable, calculer l'AI
@@ -151,54 +161,17 @@ def parse_document(file_path):
     return scenarios
 
 
-
-def convert_timeandtheta(time_scale, scenario):
-    new_times = [0.] 
-    thetas = [scenario.theta[0]]
-    b_index = 0
-    relative_size = 1.
-    timem1  = 0.
-    
-    # Loop over the time scale to calculate the new times and thetas
-    for index, time in enumerate(time_scale):
-        new_times.append(new_times[-1] + (time - timem1) * relative_size)
-        thetas.append(scenario.theta[b_index])
-        timem1 = time
-        
-        if b_index < len(scenario.breakpoints) and scenario.breakpoints[b_index] == index + 1:
-            b_index += 1
-            thetas.append(scenario.theta[b_index])
-            new_times.append(new_times[-1])
-            relative_size = scenario.theta[b_index] / scenario.theta[0]
-    return new_times , thetas
-
-
-def convert_scenario(scenario, mu, l, generation_time):
-    if mu > 0 and l > 0:
-        # Calculate effective population size at each breakpoint
-        scenario.effective_sizes = [theta / (4 * mu * l) for theta in scenario.theta]
-        
-        # Times in generations scaled by Ne at present
-        present_ne = scenario.effective_sizes[0]
-        scenario.times_generations = [time * present_ne for time in scenario.times]
-        
-        # Times in years if generation_time is provided
-        if generation_time > 0:
-            scenario.times_years = [time * generation_time for time in scenario.times_generations]
-    
-    return scenario
-
-def deme_format(scenario, output, mu=-1, g=-1, L=-1):
+def deme_format(scenario, output, g=-1):
 
     # output = f"{len(scenario.times + 1)}_epochs.yml"
     times = scenario.times
     sizes = scenario.theta
     unit = "Ne generations"
-    if mu > 0 and L > 0:
+    if len(scenario.times_generations) > 0:
         times = scenario.times_generations
         sizes = scenario.effective_sizes
         unit = "generations"
-        if g > 0:
+        if len(scenario.times_years) > 0:
             times = scenario.times_years
             unit = "years"
             generation_time = g  # à condition qu’il existe
@@ -225,7 +198,7 @@ def deme_format(scenario, output, mu=-1, g=-1, L=-1):
     return times, unit
 
 
-def plot_demographic_scenarios4(scenarios, output_directory, best, o = 0, mu=-1, l=-1, g=-1):
+def plot_demographic_scenarios4(scenarios, output_directory, best, o = 0, g = -1):
     # Créer le sous-dossier "demes_format" s'il n'existe pas
     demes_dir = os.path.join(output_directory, "demes_format")
     os.makedirs(demes_dir, exist_ok=True)
@@ -239,7 +212,7 @@ def plot_demographic_scenarios4(scenarios, output_directory, best, o = 0, mu=-1,
         yml_path = os.path.join(demes_dir, f"{base_name}.yml")
 
         # Génération du fichier .yml avec la fonction deme_format
-        times, unit = deme_format(scenario, yml_path, mu, g, l)
+        times, unit = deme_format(scenario, yml_path, g)
         # Charger le graphe à partir du fichier YML
         graph = demes.load(yml_path)
 
@@ -474,8 +447,8 @@ def main():
 
     
     # Conversion des scénarios avec les paramètres mutation_rate, genome_length et generation_time
-    for scenario in scenarios:
-        convert_scenario(scenario, args.mutation_rate, args.genome_length, args.generation_time)
+    # for scenario in scenarios:
+    #     convert_scenario(scenario, args.mutation_rate, args.genome_length, args.generation_time)
     
    # pdf_path = generate_pdf_report(scenarios, sfs, args.output)
    # print(f"PDF report saved at {pdf_path}")
@@ -500,8 +473,7 @@ def main():
     # Tracer les scénarios démographiques avec les courbes constantes par morceaux (si fournies)
     best = select_best_model_lrt_cumulative(scenarios, args.output, alpha=0.05)
     plot_demographic_scenarios4(
-        scenarios, args.output, best, args.oriented,
-        args.mutation_rate, args.genome_length, args.generation_time)
+        scenarios, args.output, best, args.oriented, args.generation_time)
     plot_diagnostics(scenarios, args.output)
     print("Best model has", len(scenarios[best].times) + 1, "epochs")
         # # # Generate individual plots
@@ -796,4 +768,24 @@ def find_best_scenario(scenarios):
 #     """
 #     affine_y = theta * z * np.array(times[0]) + theta
 #     ax1.plot(times[0], affine_y, label=f'Simulation', color='black')
+
+# def convert_timeandtheta(time_scale, scenario):
+#     new_times = [0.] 
+#     thetas = [scenario.theta[0]]
+#     b_index = 0
+#     relative_size = 1.
+#     timem1  = 0.
+    
+#     # Loop over the time scale to calculate the new times and thetas
+#     for index, time in enumerate(time_scale):
+#         new_times.append(new_times[-1] + (time - timem1) * relative_size)
+#         thetas.append(scenario.theta[b_index])
+#         timem1 = time
+        
+#         if b_index < len(scenario.breakpoints) and scenario.breakpoints[b_index] == index + 1:
+#             b_index += 1
+#             thetas.append(scenario.theta[b_index])
+#             new_times.append(new_times[-1])
+#             relative_size = scenario.theta[b_index] / scenario.theta[0]
+#     return new_times , thetas
 

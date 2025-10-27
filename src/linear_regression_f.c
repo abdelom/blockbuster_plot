@@ -15,14 +15,14 @@
 
 
 
-Flag init_flag(int sfs_length, double *thetas , double n_theta)
+Flag init_flag(int sfs_length, double *thetas , double n_parameters)
 {
     Flag flag;
     flag.thetas = thetas;
-    flag.n_theta = n_theta;
+    flag.n_theta = n_parameters / 2 + 1;
     flag.sfs = malloc(sizeof(double) * sfs_length);
     flag.n_theta_fixed = 0;
-    for(int i = 0; i < n_theta; i ++)
+    for(int i = 0; i < flag.n_theta; i ++)
     {
         if(thetas[i] != 0)
             flag.n_theta_fixed ++;
@@ -66,6 +66,29 @@ double * init_system_f(SFS sfs, Flag *flag, System system)
 }
 
 
+double log_likelihood_flag(SFS sfs, System system, Solution *sol, double *sfs_theo, Time_gride tg, Flag flag)
+{
+    double ll = log_likelihood(sfs, system, sol, sfs_theo, tg);
+    double time = 0.0, lb = 0.0, delta_time = 0.0;
+    for(int i = flag.n_theta; i < 2 * flag.n_theta - 1; i ++)
+    {
+        int j = i - flag.n_theta;
+        delta_time = (tg.time_scale[sol->breakpoints[j] - 1] - lb) ;
+        delta_time*= sol->thetas[j] / sol->thetas[0];
+        time += delta_time ;
+        lb = tg.time_scale[sol->breakpoints[j] - 1];
+        if(flag.thetas[i] == 0.)
+            continue;
+        
+        if(fabs(time - flag.thetas[i]) / flag.thetas[i] > 1e-1)
+        {
+            // printf("%f %f %faa\n", time, flag.thetas[i], fabs(time - flag.thetas[i]) / flag.thetas[i]);
+            return -INFINITY;
+        }
+    }
+    return ll;
+}
+
 /**
  * Resolves the system of equations to estimate population mutation rates (thetas) and calculates log likelihood and distance from observed sfs given fixed times of change.
  *
@@ -95,7 +118,7 @@ void system_resolution_f(Solution *sol, SFS sfs, Time_gride tg, Flag flag)
         // Step 4: Estimate population mutation rates (thetas) using matrix multiplication (X^T X)-1X^T * SFS
         cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                     n_col, 1, sfs.sfs_length, 1.0, regressors, sfs.sfs_length, flag.sfs, 1, 0.0, thetas_tmp, 1);
-        replace_negative_with_1(thetas_tmp, n_col); // if thetas are negatives they are replaced by 1 as population sizes cannot be inferior to 0}
+        // replace_negative_with_1(thetas_tmp, n_col); // if thetas are negatives they are replaced by 1 as population sizes cannot be inferior to 0}
         free(regressors);
         free(weight_f);
     }
@@ -108,11 +131,12 @@ void system_resolution_f(Solution *sol, SFS sfs, Time_gride tg, Flag flag)
         // printf("%f\n", sol->thetas[i]);
     }
     double *sfs_theo = SFS_theo(sol->thetas, system, sfs.sfs_length);
-    sol->log_likelihood = log_likelihood(sfs, system, sol, sfs_theo);
+    sol->log_likelihood = log_likelihood_flag(sfs, system, sol, sfs_theo, tg, flag);
     sol->distance = distance(sfs.training, sfs_theo, sfs.sfs_length);
     free(system.weight);
     free(sfs_theo);    // Free the memory allocated for the frequency SFS
     free(thetas_tmp);
+
 }
 
 
