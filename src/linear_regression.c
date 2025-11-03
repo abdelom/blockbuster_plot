@@ -216,7 +216,7 @@ double log_likelihood(SFS sfs, System system, Solution *sol, double * sfs_theo, 
         delta_time = (tg.time_scale[sol->breakpoints[i] - 1] - lb) * sol->thetas[i] / sol->thetas[0];
         // if(delta_time < 0)
         
-        if(time > 0. && (delta_time / time < 1e-1)) 
+        if(time >= 0. && (delta_time / time < sfs.delta_time)) 
         {
             return -INFINITY;
         }
@@ -227,7 +227,7 @@ double log_likelihood(SFS sfs, System system, Solution *sol, double * sfs_theo, 
     for (int i = 0; i < sfs.sfs_length; i++)
         llikelihood += (sfs.test[i] * log10(sfs_theo2[i]));
     // for (int i = 1; i <= sol -> nb_breakpoints; i ++)
-    //     llikelihood += - 1 * fabs(log10(sol->thetas[i] / sol->thetas[i-1]));
+        // llikelihood += - 1 * fabs(log10(sol->thetas[i] / sol->thetas[i-1]));
     free(sfs_theo2);
     return llikelihood; // Return the computed log likelihood
 }
@@ -432,12 +432,12 @@ void save_solution(Solution sol, SFS sfs, Time_gride tg , char *out_file, double
     if(mut > 0 && genome_length > 0){
         fprintf(file, "\n time in generations: ");
         for(int i = 0; i < sol.nb_breakpoints; i++){
-             fprintf(file, "%f ", sol.time[i] * effective_Ne[0]);
+             fprintf(file, "%f ", sol.time[i] * effective_Ne[0] * 2);
         }
          if(gen_time > 0){
         fprintf(file, "\n time in years: ");
         for(int i = 0; i < sol.nb_breakpoints; i++){
-             fprintf(file, "%f ", sol.time[i] * effective_Ne[0] * gen_time);
+             fprintf(file, "%f ", sol.time[i] * effective_Ne[0] * gen_time * 2);
         }
     }
     }

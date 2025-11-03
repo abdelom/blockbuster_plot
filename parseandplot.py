@@ -9,6 +9,7 @@ import numpy as np
 from scipy.stats import chi2
 import demes
 import demesdraw
+# import stdpopsim
 
 
 class Scenario:
@@ -229,6 +230,10 @@ def plot_demographic_scenarios4(scenarios, output_directory, best, o = 0, g = -1
         # --- Subplot 1 : Démographie ---
         ax1 = axes[0]
         demesdraw.size_history(graph, ax=ax1, inf_ratio=1e-4, log_size=True, colours=colours)
+        # species = stdpopsim.get_species("HomSap")
+        # model = species.get_demographic_model("Zigzag_1S14")
+        # graph = model.model.to_demes()
+        # demesdraw.size_history(graph, ax=ax1,  log_size=True)
         ax1.set_xscale("log")
         if len(times) > 0:
             ax1.set_xlim(left=min(times)/5., right=2*max(times))

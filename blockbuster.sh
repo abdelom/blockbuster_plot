@@ -46,11 +46,12 @@ GRID_SIZE=35
 EPOCHS=5
 RECENT="-1"
 SING=1
+DELTA_FLAG=False;
 THETA_LIST=""   # <- LISTE DE THETAS FIXÉS
 
 # Parse command-line arguments with getopt
-ARGS=$(getopt -o "s:p:o:b:L:m:g:u:l:e:r:n:S:t:P:" \
-              -l "sfs:,prefixe_directory:,oriented:,blocks:,genome_length:,mutation_rate:,generation_time:,upper_bound:,lower_bound:,epochs:,grid_size:,singleton:,troncation:,parameters_list:,help" \
+ARGS=$(getopt -o "s:p:o:b:L:m:g:u:l:e:r:n:S:t:P:d" \
+              -l "sfs:,prefixe_directory:,oriented:,blocks:,genome_length:,mutation_rate:,generation_time:,upper_bound:,lower_bound:,epochs:,grid_size:,singleton:,troncation:,parameters_list:,delta_time,help" \
               -- "$@")
 
 if [ $? -ne 0 ]; then
@@ -74,7 +75,7 @@ while true; do
         -l|--lower_bound) LOWER_BOUND="$2"; shift 2;;
         -e|--epochs) EPOCHS="$2"; shift 2;;
         -t|--troncation) TRONC="$2"; shift 2;;
-        # -r|--recent) RECENT="$2"; shift 2;;
+        -d|--delta_time) DELTA_FLAG=true; shift 1;;   # ✅ flag booléen sans argument
         -n|--grid_size) GRID_SIZE="$2"; shift 2;;
         -S|--singleton) SING="$2"; shift 2;;
         -P|--parameters_list) THETA_LIST="$2"; shift 2;;
@@ -114,19 +115,21 @@ echo
 echo ">>>> Running C program: inference"
 START_TIME_C=$(date +%s)
 echo 
-echo "C command line : "
-echo ./bin/blockbuster_main --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" \
-    -u "$UPPER_BOUND" -l "$LOWER_BOUND" -e "$EPOCHS" -n "$GRID_SIZE" \
-    -S "$SING" -t "$TRONC"
+# Construction de la commande C
+C_CMD="./bin/blockbuster_main --sfs $SFS_FILE -p $OUTPUT_DIR -o $ORIENTED -b $NUM_BLOCKS  -u $UPPER_BOUND -l $LOWER_BOUND -e $EPOCHS -n $GRID_SIZE -S $SING -t $TRONC"
 
-./bin/blockbuster_main --sfs "$SFS_FILE" -p "$OUTPUT_DIR" -o "$ORIENTED" -b "$NUM_BLOCKS" \
-    -u "$UPPER_BOUND" -l "$LOWER_BOUND" -e "$EPOCHS" -n "$GRID_SIZE" -P "$THETA_LIST"\
-    -S "$SING" -t "$TRONC" -L "$GENOME_LENGTH" -m "$MUTATION_RATE" -g "$GENERATION_TIME" -P "$THETA_LIST"
-
-if [ $? -ne 0 ]; then
-    echo "Error: C program failed to execute. Exiting."
-    exit 1
+# Ajouter -d si le flag est présent
+if [ "$DELTA_FLAG" = true ]; then
+    C_CMD="$C_CMD -d"
 fi
+
+echo
+echo "C command line:"
+echo "$C_CMD"
+echo
+
+# Exécution directe
+eval $C_CMD
 
 END_TIME_C=$(date +%s)
 EXEC_TIME_C=$((END_TIME_C - START_TIME_C))

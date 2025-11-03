@@ -11,6 +11,8 @@
 Solution *find_scenario(SFS sfs, Time_gride tg, int changes);
 // Solution generate_brk_combinations_f(int nb_breakpoints, SFS sfs, Time_gride tg, Flag f);
 Solution *find_scenario_f(SFS sfs, Time_gride tg, Flag flag);
+Solution generate_brk_combinations(int nb_breakpoints, SFS sfs, Time_gride tg);
+void refine_solution(Solution *sol_initiale, SFS sfs, Time_gride tg);
 void print_solution(Solution sol, Time_gride tg);
 
 // solution* recent_infrence(solution *list_solution, int changes, double **sfs, double ** cumul_weight, int sfs_length, int n_sample);

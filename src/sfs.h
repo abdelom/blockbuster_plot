@@ -14,10 +14,12 @@ typedef struct sfs
     int singleton;          // Whether singletons are included (1 = yes, 0 = ignored).
     int troncation;         // Maximum number of bins to keep if truncation is applied.
     int oriented;           // Whether the SFS is oriented (1 = yes, 0 = folded/unoriented).
+    double delta_time;    // Whether to use delta time splitting (1 = yes, 0 = no).
 } SFS;
 
-
-SFS int_sfs(char *sfs_file, int oriented, int troncation, int singleton, int num_blocks);
+double generate_normal_random(double mu, double sigma);
+SFS int_sfs(char *sfs_file, int oriented, int troncation, int singleton, int num_blocks, int delta_time);
+SFS noise_sfs(SFS sfs);
 void clear_sfs(SFS sfs);
 
 #endif // SFS_H

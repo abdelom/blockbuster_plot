@@ -25,6 +25,7 @@ typedef struct
     double genome_length;
     double mutation_rate;
     double generation_time;   
+    int delta_time;
 } Args;
 
 
@@ -154,6 +155,7 @@ int parse_args(int argc, char *argv[], Args *args)
     args->genome_length = -1.; // Default genome lengt  
     args->mutation_rate = -1.; // Default mutation rate
     args->generation_time = -1.; // Default generation time in years
+    args->delta_time = 1;
 
     // Options longues
     static struct option long_options[] = {
@@ -172,12 +174,13 @@ int parse_args(int argc, char *argv[], Args *args)
         {"recent", required_argument, 0, 'r'},
         {"singleton", required_argument, 0, 'S'},
         {"parameters_flag", required_argument, 0, 'P'},
+        {"delta_time", no_argument, 0, 'd'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "e:p:o:b:l:u:h:s:r:n:S:t:P:m:L:g:", long_options, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "e:p:o:b:l:u:h:s:r:n:S:t:P:m:L:g:d", long_options, NULL)) != -1)
     {
         switch (opt)
         {
@@ -242,6 +245,9 @@ int parse_args(int argc, char *argv[], Args *args)
             case 'h':
                 usage(argv[0]);
                 return 1;
+            case 'd':
+                args->delta_time = 0;
+                break;
             default:
                 usage(argv[0]);
                 return 1;
@@ -335,7 +341,7 @@ double * times_c(Solution s)
     {
         delta_time = (s.time[i] - lb) * s.thetas[0] / s.thetas[i];
         time += delta_time;
-        // printf("\n%faa\n", s.time[i]);
+        printf("\n%faa\n", time);
         lb = s.time[i];
         H[i] = time;
     }
@@ -368,9 +374,10 @@ static double clamp(double x, double lo, double hi) {
     return x;
 }
 
+
 Solution metropolis_hastings(Solution sol_init, SFS sfs, Time_gride tg, int iterations)
 {
-    const double log_proposal_sd = 0.01;
+    const double log_proposal_sd = 0.05;
     const double H_min = 1e-4;
     const double H_max = 2.0;
     double log_max = -INFINITY;
@@ -391,15 +398,34 @@ Solution metropolis_hastings(Solution sol_init, SFS sfs, Time_gride tg, int iter
 
     for (int i = 0; i < iterations; ++i) {
 
-        // ---- Proposer de nouvelles valeurs pour TOUS les H ----
-        double *H_prop = malloc(len * sizeof(double));
-        for (int k = 0; k < len; ++k) {
-            double logH = log(H_new[k]);
-            double prop = logH + normal01() * log_proposal_sd;
-            double Hcand = exp(prop);
-            Hcand = clamp(Hcand, H_min, H_max);
-            H_prop[k] = Hcand;
-        }
+       // ---- Proposer de nouvelles valeurs pour TOUS les H via les deltas ----
+    double *H_prop = malloc(len * sizeof(double));
+
+    // Tirer la première valeur directement (comme avant)
+    double logH0 = log(H_new[0]);
+    double prop0 = logH0 + normal01() * log_proposal_sd;
+    double Hcand0 = exp(prop0);
+    Hcand0 = clamp(Hcand0, H_min, H_max);
+    H_prop[0] = Hcand0;
+
+    // Tirer les deltas pour les valeurs suivantes
+    for (int k = 1; k < len; ++k) {
+        double prev = H_prop[k - 1];
+
+        // Tirage d'un delta sur l'échelle log
+        double log_delta = log(H_new[k] - H_new[k - 1]);
+        double prop_delta = log_delta + normal01() * log_proposal_sd;
+        double delta = exp(prop_delta);
+
+        // Appliquer la contrainte : delta >= 10% du temps précédent
+        double min_delta = 0.01 * prev;
+        if (delta < min_delta) delta = min_delta;
+
+        // Calculer Hcand et appliquer les bornes globales
+        double Hcand = prev + delta;
+        Hcand = clamp(Hcand, H_min, H_max);
+        H_prop[k] = Hcand;
+    }
 
         // ---- Calcul du candidat ----
         tg2.time_scale = H_prop;
@@ -427,9 +453,13 @@ Solution metropolis_hastings(Solution sol_init, SFS sfs, Time_gride tg, int iter
 
         if (i %1000 == 0){
             chaine[i] = copy_solution(current);
-            printf(" \n%.6f %f %f %f, ", current.thetas[0],  current.thetas[1], current.thetas[2], current.log_likelihood);
+            printf(" \n %d %.6f  ", i, current.log_likelihood);
+            convert_times(&current, tg2, sfs);
             for(int l =0; l < current.nb_breakpoints; l++){
-                printf("%.6f ", H_prop[l]);
+                printf("%f ", current.time[l]);
+            }
+            for(int l =0; l <= current.nb_breakpoints; l++){
+                printf("%f ", current.thetas[l]);
             }
         }
          free(H_prop);
@@ -437,6 +467,35 @@ Solution metropolis_hastings(Solution sol_init, SFS sfs, Time_gride tg, int iter
 
     printf("Final logL = %.6f\n", log_max);
     return current;
+}
+
+
+void bootstrap(SFS sfs, Time_gride tg, int epochs)
+{
+    Solution *list_solution = malloc(200  * sizeof(Solution));
+    for (int b = 0; b < 200; b++)
+    {
+        // printf("\n x x ");
+        SFS sfs_boot = noise_sfs(sfs);
+        // Solution *solution = find_scenario(sfs_boot, tg, epochs);
+        // char *outfile_b = construct_output_filepath(out_file, "bootstrap_scenarios.txt");
+        list_solution[b] = generate_brk_combinations(epochs - 1, sfs_boot, tg);
+        if (epochs - 1 >= 1)
+        {
+            refine_solution(&list_solution[b], sfs_boot, tg);
+        }
+        printf("\n 10 10 ");
+        convert_times(&list_solution[b], tg, sfs_boot);
+        for(int l =0; l < list_solution[b].nb_breakpoints; l++){
+                printf(" %f ", list_solution[b].time[l]);
+            }
+        for(int l =0; l <= list_solution[b].nb_breakpoints; l++){
+                printf("%f ", list_solution[b].thetas[l]);
+            }
+        // save_list_solution(list_solution, sfs_boot, outfile_b, epochs, tg);
+        clear_sfs(sfs_boot);
+        // clear_solution(sol);
+    }
 }
 
 int main(int argc, char *argv[])
@@ -449,7 +508,7 @@ int main(int argc, char *argv[])
         return 1; // Erreur dans le parsing
     char *outfile = construct_output_filepath(args.prefixe, "scenarios.txt");
     // Generate the time scale (either logarithmic or linear based on the `log` flag)
-    SFS sfs= int_sfs(args.sfs_file, args.oriented, args.troncation, args.singleton, args.num_blocks);
+    SFS sfs= int_sfs(args.sfs_file, args.oriented, args.troncation, args.singleton, args.num_blocks, args.delta_time);
     if (args.lower_bound < 0)
         args.lower_bound = 1. / (10 * sfs.n_haplotypes);
     if (args.recent > 0)
@@ -475,6 +534,7 @@ int main(int argc, char *argv[])
         // clock_t end_time = clock();                                                // End time measurement
         // double cpu_time_used = ((double)(end_time - start_time)) / CLOCKS_PER_SEC; // Calculate the time in seconds
         // printf("\ns Time taken for system resolution: %f seconds\n", cpu_time_used); // Print the elapsed time
+        // bootstrap(sfs, time_grid, 7);
         save_list_solution(list_solution, sfs, outfile, args.epochs, time_grid, args);
     }
     // generate_brk_combinations_f(flag.n_theta - 1, sfs, time_grid, flag);

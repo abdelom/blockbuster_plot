@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <time.h>
 
 /**
@@ -161,7 +162,7 @@ void site_sampling(int n, int *tirages, int taille)
     for (int i = 0; i < n; i++)
         indices[i] = i;
     // Initialiser le générateur de nombres aléatoires
-    srand(time(NULL));
+    // srand(time(NULL));
     // Tirer au hasard un tiers des indices sans remise
     for (int i = 0; i < taille; i++)
     {
@@ -241,7 +242,7 @@ double *test_split(SFS sfs, int frac)
  *
  * @return An initialized SFS structure containing training and test arrays and metadata.
  */
-SFS int_sfs(char *sfs_file, int oriented, int troncation, int singleton, int num_blocks)
+SFS int_sfs(char *sfs_file, int oriented, int troncation, int singleton, int num_blocks, int delta_time)
 {
     SFS sfs;
 
@@ -278,8 +279,58 @@ SFS int_sfs(char *sfs_file, int oriented, int troncation, int singleton, int num
 
     // Split SFS into training and test sets
     sfs.test = test_split(sfs, num_blocks);
-
+    if(delta_time)
+        sfs.delta_time = 1e-1;
     return sfs;
+}
+
+SFS copy_sfs(SFS sfs)
+{
+    SFS new_sfs;
+    new_sfs.sfs_length = sfs.sfs_length;
+    new_sfs.n_haplotypes = sfs.n_haplotypes;
+    new_sfs.training_size = sfs.training_size;
+    new_sfs.singleton = sfs.singleton;
+    new_sfs.troncation = sfs.troncation;
+    new_sfs.oriented = sfs.oriented;
+    new_sfs.training = malloc(sizeof(double) * sfs.sfs_length);
+    new_sfs.test = malloc(sizeof(double) * sfs.sfs_length);
+    for (int i = 0; i < sfs.sfs_length; i++)
+    {
+        new_sfs.training[i] = sfs.training[i];
+        new_sfs.test[i] = sfs.test[i];
+    }
+    return new_sfs;
+}
+
+double generate_normal_random(double mu, double sigma)
+{
+    double u1 = rand() / (double)RAND_MAX; // Génère un nombre aléatoire entre 0 et 1
+    double u2 = rand() / (double)RAND_MAX;
+    // Génère un autre nombre aléatoire entre 0 et 1
+    double z = sqrt(-2 * log(u1)) * cos(2 * 3.1415926535898 * u2); // Transformation de Box-Muller
+    return mu + z * sqrt(sigma);                                   // réalisation du variable aléatoire suivant une loie normale de paramètres mu et sigma
+}
+
+
+SFS noise_sfs(SFS sfs)
+{
+    SFS new_sfs;
+    new_sfs.sfs_length = sfs.sfs_length;
+    new_sfs.n_haplotypes = sfs.n_haplotypes;
+    new_sfs.training_size = sfs.training_size;
+    new_sfs.singleton = sfs.singleton;
+    new_sfs.troncation = sfs.troncation;
+    new_sfs.oriented = sfs.oriented;
+    new_sfs.training = malloc(sizeof(double) * sfs.sfs_length);
+    new_sfs.test = malloc(sizeof(double) * sfs.sfs_length);
+    srand(time(NULL));
+    for (int i = 0; i < sfs.sfs_length; i++)
+    {
+        new_sfs.training[i] = generate_normal_random(sfs.training[i], sfs.training[i]);
+        new_sfs.test[i] = generate_normal_random(sfs.test[i], sfs.test[i]);
+    }
+    return new_sfs;
 }
 
 void clear_sfs(SFS sfs)

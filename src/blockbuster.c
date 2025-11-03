@@ -128,7 +128,7 @@ Solution generate_brk_combinations_f(int nb_breakpoints, SFS sfs, Time_gride tg,
         // Calculate the solution (log-likelihood and distance) for the new combination
         system_resolution_f(&sol, sfs, tg, f);
         // If the new solution has a higher log-likelihood and all theta values are positive, keep its
-        if (isnan(tmp_sol.log_likelihood) || sol.log_likelihood > tmp_sol.log_likelihood)
+        if ( sol.log_likelihood > tmp_sol.log_likelihood)
         {
             clear_solution(tmp_sol);
             tmp_sol = copy_solution(sol);
@@ -285,6 +285,7 @@ Solution *find_scenario(SFS sfs, Time_gride tg, int epochs)
     {
         // Generate the best solution for the current number of breakpoints
         liste_solution[nb_breakpoints] = generate_brk_combinations(nb_breakpoints, sfs, tg);
+        printf("%f aa\n", liste_solution[nb_breakpoints].log_likelihood);
         if (nb_breakpoints >= 1)
         {
             refine_solution(&liste_solution[nb_breakpoints], sfs, tg);
