@@ -1,6 +1,7 @@
 #include "blockbuster_grid.h"
 #include "blockbuster.h"
 #include "sfs.h"
+#include "blockbuster_sampler.h"
 #include <getopt.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -12,8 +13,8 @@ typedef struct
     int oriented;           
     int singleton;          
     int num_blocks;         
-    int epochs;             
-    double recent;          
+    int epochs;  
+    int repeats;                    
     char *prefixe;          
     char *sfs_file;         
     double upper_bound;     
@@ -126,7 +127,7 @@ void usage(char *prog_name)
     fprintf(stderr, "  -l, --lower_bound <value>      Lower bound for time grid (default: 1e-4)\n");
     fprintf(stderr, "  -n, --grid_size <value>        Number of time points between lower and upper bound (default: 35)\n");
     fprintf(stderr, "  -e, --epochs_max <value>       Maximum number of epochs (default: 5)\n");
-    fprintf(stderr, "  -r, --recent <value>           Recent time (optional)\n");
+    fprintf(stderr, "  -r, --repeats <value>          Number of repeats for curbe smoothing (default: 0)\n");
     fprintf(stderr, "  -S, --singleton <1|0>          Include singletons (default: 1)\n");
     fprintf(stderr, "  -t, --troncation <0|1>         Troncation option\n");
     fprintf(stderr, "  -P, --parameters_flag <string>  Parameters formatted as '0,0|0,0,0'\n");
@@ -146,7 +147,7 @@ int parse_args(int argc, char *argv[], Args *args)
     args->upper_bound = 1.0;
     args->lower_bound = 1e-4;
     args->epochs = 5;
-    args->recent = -1.0;
+    args->repeats = 0;
     args->grid_size = 35;
     args->singleton = 1;
     args->troncation = 0;
@@ -171,7 +172,7 @@ int parse_args(int argc, char *argv[], Args *args)
         {"mutation_rate", required_argument, 0, 'm'},
         {"genome_length", required_argument, 0, 'L'},
         {"generation_time", required_argument, 0, 'g'},
-        {"recent", required_argument, 0, 'r'},
+        {"repeats", required_argument, 0, 'r'},
         {"singleton", required_argument, 0, 'S'},
         {"parameters_flag", required_argument, 0, 'P'},
         {"delta_time", no_argument, 0, 'd'},
@@ -203,7 +204,7 @@ int parse_args(int argc, char *argv[], Args *args)
                 args->troncation = atoi(optarg);
                 break;
             case 'r':
-                args->recent = atof(optarg);
+                args->repeats = atof(optarg);
                 break;
             case 'b':
                 args->num_blocks = atoi(optarg);
@@ -333,170 +334,143 @@ void save_list_solution(Solution *list_solution, SFS sfs, char *out_file, int ep
 }
 
 
-double * times_c(Solution s)
-{
-    double *H = malloc(s.nb_breakpoints * sizeof(double));
-    double time = 0.0, lb = 0.0, delta_time = 0.0;
-    for (int i = 0; i < s.nb_breakpoints; i ++)
-    {
-        delta_time = (s.time[i] - lb) * s.thetas[0] / s.thetas[i];
-        time += delta_time;
-        printf("\n%faa\n", time);
-        lb = s.time[i];
-        H[i] = time;
-    }
-    return H;
-}
+// double * times_c(Solution s)
+// {
+//     double *H = malloc(s.nb_breakpoints * sizeof(double));
+//     double time = 0.0, lb = 0.0, delta_time = 0.0;
+//     for (int i = 0; i < s.nb_breakpoints; i ++)
+//     {
+//         delta_time = (s.time[i] - lb) * s.thetas[0] / s.thetas[i];
+//         time += delta_time;
+//         printf("\n%faa\n", time);
+//         lb = s.time[i];
+//         H[i] = time;
+//     }
+//     return H;
+// }
 
-static double normal01(void) {
-    static int has_spare = 0;
-    static double spare;
-    if (has_spare) {
-        has_spare = 0;
-        return spare;
-    } else {
-        double u, v, s;
-        do {
-            u = 2.0 * drand48() - 1.0;
-            v = 2.0 * drand48() - 1.0;
-            s = u*u + v*v;
-        } while (s == 0.0 || s >= 1.0);
-        double mul = sqrt(-2.0 * log(s) / s);
-        spare = v * mul;
-        has_spare = 1;
-        return u * mul;
-    }
-}
+// static double normal01(void) {
+//     static int has_spare = 0;
+//     static double spare;
+//     if (has_spare) {
+//         has_spare = 0;
+//         return spare;
+//     } else {
+//         double u, v, s;
+//         do {
+//             u = 2.0 * drand48() - 1.0;
+//             v = 2.0 * drand48() - 1.0;
+//             s = u*u + v*v;
+//         } while (s == 0.0 || s >= 1.0);
+//         double mul = sqrt(-2.0 * log(s) / s);
+//         spare = v * mul;
+//         has_spare = 1;
+//         return u * mul;
+//     }
+// }
 
-static double clamp(double x, double lo, double hi) {
-    if (x < lo) return lo;
-    if (x > hi) return hi;
-    return x;
-}
+// static double clamp(double x, double lo, double hi) {
+//     if (x < lo) return lo;
+//     if (x > hi) return hi;
+//     return x;
+// }
 
 
-Solution metropolis_hastings(Solution sol_init, SFS sfs, Time_gride tg, int iterations)
-{
-    const double log_proposal_sd = 0.05;
-    const double H_min = 1e-4;
-    const double H_max = 2.0;
-    double log_max = -INFINITY;
-    static int seeded = 0;
-    if (!seeded) {
-        srand48((unsigned) time(NULL) ^ (unsigned) getpid());
-        seeded = 1;
-    }
+// Solution metropolis_hastings(Solution sol_init, SFS sfs, Time_gride tg, int iterations)
+// {
+//     const double log_proposal_sd = 0.05;
+//     const double H_min = 1e-4;
+//     const double H_max = 2.0;
+//     double log_max = -INFINITY;
+//     static int seeded = 0;
+//     if (!seeded) {
+//         srand48((unsigned) time(NULL) ^ (unsigned) getpid());
+//         seeded = 1;
+//     }
 
-    Solution current = copy_solution(sol_init);
-    double *H = times_c(sol_init);
-    int len = current.nb_breakpoints;
+//     Solution current = copy_solution(sol_init);
+//     double *H = times_c(sol_init);
+//     int len = current.nb_breakpoints;
 
-    Solution *chaine = malloc(iterations * sizeof(Solution));
-    double *H_new = malloc(len * sizeof(double));
-    Time_gride tg2 = init_time_grid_H_wik(tg, sfs, H);
-    memcpy(H_new, H, len * sizeof(double));
+//     Solution *chaine = malloc(iterations * sizeof(Solution));
+//     double *H_new = malloc(len * sizeof(double));
+//     Time_gride tg2 = init_time_grid_H_wik(tg, sfs, H);
+//     memcpy(H_new, H, len * sizeof(double));
 
-    for (int i = 0; i < iterations; ++i) {
+//     for (int i = 0; i < iterations; ++i) {
 
-       // ---- Proposer de nouvelles valeurs pour TOUS les H via les deltas ----
-    double *H_prop = malloc(len * sizeof(double));
+//        // ---- Proposer de nouvelles valeurs pour TOUS les H via les deltas ----
+//     double *H_prop = malloc(len * sizeof(double));
 
-    // Tirer la première valeur directement (comme avant)
-    double logH0 = log(H_new[0]);
-    double prop0 = logH0 + normal01() * log_proposal_sd;
-    double Hcand0 = exp(prop0);
-    Hcand0 = clamp(Hcand0, H_min, H_max);
-    H_prop[0] = Hcand0;
+//     // Tirer la première valeur directement (comme avant)
+//     double logH0 = log(H_new[0]);
+//     double prop0 = logH0 + normal01() * log_proposal_sd;
+//     double Hcand0 = exp(prop0);
+//     Hcand0 = clamp(Hcand0, H_min, H_max);
+//     H_prop[0] = Hcand0;
 
-    // Tirer les deltas pour les valeurs suivantes
-    for (int k = 1; k < len; ++k) {
-        double prev = H_prop[k - 1];
+//     // Tirer les deltas pour les valeurs suivantes
+//     for (int k = 1; k < len; ++k) {
+//         double prev = H_prop[k - 1];
 
-        // Tirage d'un delta sur l'échelle log
-        double log_delta = log(H_new[k] - H_new[k - 1]);
-        double prop_delta = log_delta + normal01() * log_proposal_sd;
-        double delta = exp(prop_delta);
+//         // Tirage d'un delta sur l'échelle log
+//         double log_delta = log(H_new[k] - H_new[k - 1]);
+//         double prop_delta = log_delta + normal01() * log_proposal_sd;
+//         double delta = exp(prop_delta);
 
-        // Appliquer la contrainte : delta >= 10% du temps précédent
-        double min_delta = 0.01 * prev;
-        if (delta < min_delta) delta = min_delta;
+//         // Appliquer la contrainte : delta >= 10% du temps précédent
+//         double min_delta = 0.01 * prev;
+//         if (delta < min_delta) delta = min_delta;
 
-        // Calculer Hcand et appliquer les bornes globales
-        double Hcand = prev + delta;
-        Hcand = clamp(Hcand, H_min, H_max);
-        H_prop[k] = Hcand;
-    }
+//         // Calculer Hcand et appliquer les bornes globales
+//         double Hcand = prev + delta;
+//         Hcand = clamp(Hcand, H_min, H_max);
+//         H_prop[k] = Hcand;
+//     }
 
-        // ---- Calcul du candidat ----
-        tg2.time_scale = H_prop;
-        cumulatve_weight_v2(sfs.n_haplotypes, sfs.n_haplotypes - 1, current.nb_breakpoints, &tg2);
+//         // ---- Calcul du candidat ----
+//         tg2.time_scale = H_prop;
+//         cumulatve_weight_v2(sfs.n_haplotypes, sfs.n_haplotypes - 1, current.nb_breakpoints, &tg2);
 
-        Solution cand = init_solution_size(current.nb_breakpoints, 1);
-        cand.breakpoints[current.nb_breakpoints] = current.nb_breakpoints + 1;
-        system_resolution(&cand, sfs, tg2);
+//         Solution cand = init_solution_size(current.nb_breakpoints, 1);
+//         cand.breakpoints[current.nb_breakpoints] = current.nb_breakpoints + 1;
+//         system_resolution(&cand, sfs, tg2);
 
-        double loglike_old = current.log_likelihood;
-        double loglike_new = cand.log_likelihood;
-        double log_accept_ratio = loglike_new - loglike_old;
+//         double loglike_old = current.log_likelihood;
+//         double loglike_new = cand.log_likelihood;
+//         double log_accept_ratio = loglike_new - loglike_old;
 
-        // ---- Acceptation / Rejet ----
-        int accept = 0;
-        if (log_accept_ratio >= 0.0 || log(drand48()) < log_accept_ratio)
-            accept = 1;
+//         // ---- Acceptation / Rejet ----
+//         int accept = 0;
+//         if (log_accept_ratio >= 0.0 || log(drand48()) < log_accept_ratio)
+//             accept = 1;
 
-        if (accept) {
-            current = copy_solution(cand);
-            memcpy(H_new, H_prop, len * sizeof(double));
-        } 
+//         if (accept) {
+//             current = copy_solution(cand);
+//             memcpy(H_new, H_prop, len * sizeof(double));
+//         } 
 
        
 
-        if (i %1000 == 0){
-            chaine[i] = copy_solution(current);
-            printf(" \n %d %.6f  ", i, current.log_likelihood);
-            convert_times(&current, tg2, sfs);
-            for(int l =0; l < current.nb_breakpoints; l++){
-                printf("%f ", current.time[l]);
-            }
-            for(int l =0; l <= current.nb_breakpoints; l++){
-                printf("%f ", current.thetas[l]);
-            }
-        }
-         free(H_prop);
-    }
+//         if (i %1000 == 0){
+//             chaine[i] = copy_solution(current);
+//             printf(" \n %d %.6f  ", i, current.log_likelihood);
+//             convert_times(&current, tg2, sfs);
+//             for(int l =0; l < current.nb_breakpoints; l++){
+//                 printf("%f ", current.time[l]);
+//             }
+//             for(int l =0; l <= current.nb_breakpoints; l++){
+//                 printf("%f ", current.thetas[l]);
+//             }
+//         }
+//          free(H_prop);
+//     }
 
-    printf("Final logL = %.6f\n", log_max);
-    return current;
-}
+//     printf("Final logL = %.6f\n", log_max);
+//     return current;
+// }
 
 
-void bootstrap(SFS sfs, Time_gride tg, int epochs)
-{
-    Solution *list_solution = malloc(200  * sizeof(Solution));
-    for (int b = 0; b < 200; b++)
-    {
-        // printf("\n x x ");
-        SFS sfs_boot = noise_sfs(sfs);
-        // Solution *solution = find_scenario(sfs_boot, tg, epochs);
-        // char *outfile_b = construct_output_filepath(out_file, "bootstrap_scenarios.txt");
-        list_solution[b] = generate_brk_combinations(epochs - 1, sfs_boot, tg);
-        if (epochs - 1 >= 1)
-        {
-            refine_solution(&list_solution[b], sfs_boot, tg);
-        }
-        printf("\n 10 10 ");
-        convert_times(&list_solution[b], tg, sfs_boot);
-        for(int l =0; l < list_solution[b].nb_breakpoints; l++){
-                printf(" %f ", list_solution[b].time[l]);
-            }
-        for(int l =0; l <= list_solution[b].nb_breakpoints; l++){
-                printf("%f ", list_solution[b].thetas[l]);
-            }
-        // save_list_solution(list_solution, sfs_boot, outfile_b, epochs, tg);
-        clear_sfs(sfs_boot);
-        // clear_solution(sol);
-    }
-}
 
 int main(int argc, char *argv[])
 {
@@ -511,11 +485,12 @@ int main(int argc, char *argv[])
     SFS sfs= int_sfs(args.sfs_file, args.oriented, args.troncation, args.singleton, args.num_blocks, args.delta_time);
     if (args.lower_bound < 0)
         args.lower_bound = 1. / (10 * sfs.n_haplotypes);
-    if (args.recent > 0)
-        args.lower_bound = 1. / (double)(args.recent * sfs.n_haplotypes);
+    // if (args.recent > 0)
+    //     args.lower_bound = 1. / (double)(args.recent * sfs.n_haplotypes);
     Time_gride time_grid = init_time_grid(sfs, args.grid_size, args.upper_bound, args.lower_bound);
     clock_t start_time = clock(); // Start time measurement
     Solution *list_solution;
+    Solution *list_solution_b;
     if (args.parameters_count > 0)
     {
         Flag flag = init_flag(sfs.sfs_length, args.parameters_flag , args.parameters_count);
@@ -534,16 +509,21 @@ int main(int argc, char *argv[])
         // clock_t end_time = clock();                                                // End time measurement
         // double cpu_time_used = ((double)(end_time - start_time)) / CLOCKS_PER_SEC; // Calculate the time in seconds
         // printf("\ns Time taken for system resolution: %f seconds\n", cpu_time_used); // Print the elapsed time
-        // bootstrap(sfs, time_grid, 7);
+        int epochs_lgt =  logratio_cumulative_test(list_solution, args.epochs, 0.05);
+        if(args.repeats > 1)
+        {
+            list_solution_b = bootstrap(sfs, time_grid,  epochs_lgt, args.repeats);
+            format_bootstrap(list_solution_b, args.repeats, args.mutation_rate, args.genome_length, args.generation_time, args.prefixe);
+        }
         save_list_solution(list_solution, sfs, outfile, args.epochs, time_grid, args);
     }
     // generate_brk_combinations_f(flag.n_theta - 1, sfs, time_grid, flag);
     // free_integral_grid(cumul_weight, n_sample);
-
     free(outfile);
     clear_time_grid(time_grid, sfs.sfs_length);
     clear_sfs(sfs);
     free(list_solution);
+    // free(list_solution_b)y;
     free(time_grid.wik);
     return 0;
 }

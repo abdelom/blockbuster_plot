@@ -303,15 +303,6 @@ SFS copy_sfs(SFS sfs)
     return new_sfs;
 }
 
-double generate_normal_random(double mu, double sigma)
-{
-    double u1 = rand() / (double)RAND_MAX; // Génère un nombre aléatoire entre 0 et 1
-    double u2 = rand() / (double)RAND_MAX;
-    // Génère un autre nombre aléatoire entre 0 et 1
-    double z = sqrt(-2 * log(u1)) * cos(2 * 3.1415926535898 * u2); // Transformation de Box-Muller
-    return mu + z * sqrt(sigma);                                   // réalisation du variable aléatoire suivant une loie normale de paramètres mu et sigma
-}
-
 
 SFS noise_sfs(SFS sfs)
 {
@@ -324,14 +315,42 @@ SFS noise_sfs(SFS sfs)
     new_sfs.oriented = sfs.oriented;
     new_sfs.training = malloc(sizeof(double) * sfs.sfs_length);
     new_sfs.test = malloc(sizeof(double) * sfs.sfs_length);
-    srand(time(NULL));
     for (int i = 0; i < sfs.sfs_length; i++)
     {
         new_sfs.training[i] = generate_normal_random(sfs.training[i], sfs.training[i]);
-        new_sfs.test[i] = generate_normal_random(sfs.test[i], sfs.test[i]);
+        new_sfs.test[i] = new_sfs.training[i]; //generate_normal_random(sfs.training[i], sfs.training[i]); //generate_normal_random(sfs.test[i], sfs.test[i]);
     }
     return new_sfs;
 }
+
+double generate_normal_random(double mu, double sigma)
+{
+    double u1 = rand() / (double)RAND_MAX; // Génère un nombre aléatoire entre 0 et 1
+    double u2 = rand() / (double)RAND_MAX;
+    // Génère un autre nombre aléatoire entre 0 et 1
+    double z = sqrt(-2 * log(u1)) * cos(2 * 3.1415926535898 * u2); // Transformation de Box-Muller
+    return mu + z * sqrt(sigma);                                   // réalisation du variable aléatoire suivant une loie normale de paramètres mu et sigma
+}
+
+
+// SFS noise_sfs(SFS sfs)
+// {
+//     SFS new_sfs;
+//     new_sfs.sfs_length = sfs.sfs_length;
+//     new_sfs.n_haplotypes = sfs.n_haplotypes;
+//     new_sfs.training_size = sfs.training_size;
+//     new_sfs.singleton = sfs.singleton;
+//     new_sfs.troncation = sfs.troncation;
+//     new_sfs.oriented = sfs.oriented;
+//     new_sfs.training = malloc(sizeof(double) * sfs.sfs_length);
+//     new_sfs.test = malloc(sizeof(double) * sfs.sfs_length);
+//     for (int i = 0; i < sfs.sfs_length; i++)
+//     {
+//         new_sfs.training[i] = generate_normal_random(sfs.training[i], sfs.training[i]);
+//         new_sfs.test[i] = generate_normal_random(sfs.training[i], 20 *sfs.training[i]); //generate_normal_random(sfs.test[i], sfs.test[i]);
+//     }
+//     return new_sfs;
+// }
 
 void clear_sfs(SFS sfs)
 {

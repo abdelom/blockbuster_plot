@@ -9,7 +9,6 @@ import numpy as np
 from scipy.stats import chi2
 import demes
 import demesdraw
-# import stdpopsim
 
 
 class Scenario:
@@ -198,6 +197,36 @@ def deme_format(scenario, output, g=-1):
         f.write(f"        end_time: {0.}\n")
     return times, unit
 
+def plot_bootstrap_curve(ax, output_directory):
+    """
+    Si un fichier boot.txt existe dans output_directory,
+    le lit et trace la courbe (Effective size vs Time in years) sur ax.
+    """
+    boot_path = os.path.join(output_directory, "boot.txt")
+    if not os.path.exists(boot_path):
+        # print(f"ℹ️ Aucun fichier boot.txt trouvé dans {output_directory}")
+        return
+
+    # try:
+    boot_data = np.loadtxt(boot_path, skiprows=1)
+    time_years = boot_data[:, 0]
+    ne_values = boot_data[:, 1]
+    if boot_data.shape[1] == 4:
+        time_years = boot_data[:, 2]
+        ne_values = boot_data[:, 3]
+    if boot_data.shape[1] == 5:
+        time_years = boot_data[:, 4]
+        ne_values = boot_data[:, 3]
+    ax.plot(
+        time_years, ne_values,
+        color="blue", linestyle="-", linewidth=1.5,
+        # label="Bootstrap harmonic mean"
+    )
+        # ax.legend()
+        # else:
+        #     print(f"⚠️ Fichier {boot_path} trouvé mais ne contient pas 5 colonnes.")
+    # except Exception as e:
+    #     print(f"⚠️ Erreur de lecture de {boot_path}: {e}")
 
 def plot_demographic_scenarios4(scenarios, output_directory, best, o = 0, g = -1):
     # Créer le sous-dossier "demes_format" s'il n'existe pas
@@ -230,10 +259,12 @@ def plot_demographic_scenarios4(scenarios, output_directory, best, o = 0, g = -1
         # --- Subplot 1 : Démographie ---
         ax1 = axes[0]
         demesdraw.size_history(graph, ax=ax1, inf_ratio=1e-4, log_size=True, colours=colours)
-        # species = stdpopsim.get_species("HomSap")
-        # model = species.get_demographic_model("Zigzag_1S14")
-        # graph = model.model.to_demes()
-        # demesdraw.size_history(graph, ax=ax1,  log_size=True)
+        if index == best:
+            plot_bootstrap_curve(ax1, output_directory)
+            # species = stdpopsim.get_species("HomSap")
+            # model = species.get_demographic_model("Zigzag_1S14")
+            # graph = model.model.to_demes()
+            # demesdraw.size_history(graph, ax=ax1,  log_size=True)
         ax1.set_xscale("log")
         if len(times) > 0:
             ax1.set_xlim(left=min(times)/5., right=2*max(times))

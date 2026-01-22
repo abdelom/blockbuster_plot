@@ -106,7 +106,7 @@ double* generate_logarithmic_scale(int grid_size, double upper_bound, double low
     // Compute logarithmic spacing parameters
     double log_min = log10(lower_bound);
     double log_max = log10(upper_bound);
-    double step = (log_max - log_min) / (grid_size - 2);
+    double step = (log_max - log_min) / (grid_size - 1);
 
     // Generate logarithmically spaced time points
     for (int i = 0; i < grid_size; i++)

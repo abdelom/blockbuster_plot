@@ -208,9 +208,15 @@ double log_likelihood(SFS sfs, System system, Solution *sol, double * sfs_theo, 
     // Calculate the log likelihood
     double time = 0.0, lb = 0.0, delta_time = 0.0;
     if(sol->thetas[sol -> nb_breakpoints] < 1e4)
+    {
+        free(sfs_theo2);
         return -INFINITY;
+    }
     if(sol->thetas[0] < 1e4)
+    {
+        free(sfs_theo2);
         return -INFINITY;
+    }
     for (int i = 0; i < sol -> nb_breakpoints; i ++)
     {
         delta_time = (tg.time_scale[sol->breakpoints[i] - 1] - lb) * sol->thetas[i] / sol->thetas[0];
@@ -218,6 +224,7 @@ double log_likelihood(SFS sfs, System system, Solution *sol, double * sfs_theo, 
         
         if(time >= 0. && (delta_time / time < sfs.delta_time)) 
         {
+            free(sfs_theo2);
             return -INFINITY;
         }
         time += delta_time ;
@@ -226,8 +233,6 @@ double log_likelihood(SFS sfs, System system, Solution *sol, double * sfs_theo, 
     }
     for (int i = 0; i < sfs.sfs_length; i++)
         llikelihood += (sfs.test[i] * log10(sfs_theo2[i]));
-    // for (int i = 1; i <= sol -> nb_breakpoints; i ++)
-        // llikelihood += - 1 * fabs(log10(sol->thetas[i] / sol->thetas[i-1]));
     free(sfs_theo2);
     return llikelihood; // Return the computed log likelihood
 }
@@ -316,6 +321,19 @@ void residues(Solution *sol, Time_gride tg, SFS sfs)
     free(system.weight);
 }
 
+
+double regularization(Solution *sol, int r)
+{
+
+    double llikelihood = sol->log_likelihood;
+    if(r)
+    {
+        for (int i = 1; i <= sol -> nb_breakpoints; i ++)
+            llikelihood += - 1 * fabs(log10(sol->thetas[i] / sol->thetas[i-1]));
+    }
+    return llikelihood;
+}
+
 /**
  * Resolves the system of equations to estimate population mutation rates (thetas) and calculates log likelihood and distance from observed sfs given fixed times of change.
  *
@@ -328,7 +346,7 @@ void residues(Solution *sol, Time_gride tg, SFS sfs)
  * Assembles regression weights based on the cumulative branch lengths.
  * Performs least square method to estimate the population mutation rates (thetas).
  **/
-void system_resolution(Solution *sol, SFS sfs, Time_gride tg)
+void system_resolution(Solution *sol, SFS sfs, Time_gride tg, int r)
 {
     // Step 1: Assemble regression weights from cumulative branch lengths
     System system = init_sytem(sfs.sfs_length, *sol, tg);
@@ -341,6 +359,7 @@ void system_resolution(Solution *sol, SFS sfs, Time_gride tg)
     // replace_negative_with_1(sol->thetas, system.n_col); // if thetas are negatives they are replaced by 1 as population sizes cannot be inferior to 0
     double *sfs_theo = SFS_theo(sol->thetas, system, sfs.sfs_length);
     sol->log_likelihood = log_likelihood(sfs, system, sol, sfs_theo, tg);
+    // sol->log_likelihood = regularization(sol, r);
     sol->distance = distance(sfs.training, sfs_theo, sfs.sfs_length);
     free(system.weight);
     free(sfs_theo);    // Free the memory allocated for the frequency SFS
@@ -464,6 +483,7 @@ void save_solution(Solution sol, SFS sfs, Time_gride tg , char *out_file, double
     free(sol.residues);
     free(sol.se_thetas);
     free(sol.fitted_sfs);
+    free(effective_Ne);
     free(sol.time);    // clear_solution(sol);
 }
 

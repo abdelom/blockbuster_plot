@@ -16,7 +16,8 @@ OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 # Dépendances spécifiques : chaque exécutable n’utilise pas tous les objets
 OBJS1 = $(OBJ_DIR)/blockbuster_grid_main.o $(OBJ_DIR)/blockbuster_grid.o $(OBJ_DIR)/linear_regression.o $(OBJ_DIR)/linear_regression_f.o
-OBJS2 = $(OBJ_DIR)/blockbuster_main.o $(OBJ_DIR)/blockbuster.o $(OBJ_DIR)/blockbuster_grid.o $(OBJ_DIR)/sfs.o $(OBJ_DIR)/linear_regression.o $(OBJ_DIR)/linear_regression_f.o
+# Ajout de blockbuster_sampler.o ici — blockbuster_main inclut blockbuster_sampler.h et utilise son code
+OBJS2 = $(OBJ_DIR)/blockbuster_main.o $(OBJ_DIR)/blockbuster.o $(OBJ_DIR)/blockbuster_grid.o $(OBJ_DIR)/sfs.o $(OBJ_DIR)/linear_regression.o $(OBJ_DIR)/linear_regression_f.o $(OBJ_DIR)/blockbuster_sampler.o 
 OBJS3 = $(OBJ_DIR)/blockbuster_simulator.o $(OBJ_DIR)/blockbuster_grid.o $(OBJ_DIR)/linear_regression.o $(OBJ_DIR)/linear_regression_f.o
 
 # Compilateur et options

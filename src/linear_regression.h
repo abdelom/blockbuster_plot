@@ -61,7 +61,7 @@ System init_sytem(int sfs_length, Solution sol, Time_gride tg);
 // double *SFS_theo(double *thetas, System system, int n)
 // double *SFS_to_freq(double *sfs_theo, int n, System system);
 // double log_likelihood(double *sfs_obs, System system, int n);
-void system_resolution(Solution *sol, SFS sfs, Time_gride tg);
+void system_resolution(Solution *sol, SFS sfs, Time_gride tg, int r);
 // Solution init_solution();
 Solution init_solution_size(int nb_breakpoints, int gridrefine);
 Solution copy_solution(Solution sol);

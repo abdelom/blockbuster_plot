@@ -13,6 +13,16 @@
 #include "linear_regression.h"
 #include "linear_regression_f.h"
 
+
+
+
+// Chi-square critical values for alpha = 0.05
+// Corresponding to df = 2, 4, 6, 8, 10, 12
+static const int DF_LIST[] = {2, 4, 6, 8, 10, 12};
+static const double CHI2_CRIT[] = {5.99, 9.49, 12.59, 15.51, 18.31, 21.03};
+static const int DF_COUNT = 6;
+
+
 /**
  * Generates the next combination of breakpoints in lexicographic order within a specified grid.
  *
@@ -30,6 +40,7 @@ int recursive_bk_combination(int *brk, int nb_breakpoints, int grid_size)
     int i = nb_breakpoints - 1;
     // Attempt to increment the last breakpoint by 1
     brk[i] += GRIDREFINE;
+
     // Adjust previous breakpoints if the current one exceeds allowable range
     while (i >= 0 && brk[i] / GRIDREFINE > grid_size + 1 - nb_breakpoints + i)
     {
@@ -42,11 +53,14 @@ int recursive_bk_combination(int *brk, int nb_breakpoints, int grid_size)
     for (int j = i + 1; j < nb_breakpoints; j++)
         brk[j] = brk[j - 1] + GRIDREFINE;
     // If the first breakpoint reaches its upper limit, all combinations have been generated
+
     if (i == 0 && brk[0] / GRIDREFINE == grid_size + 1 - nb_breakpoints)
         return 0;
     // Return 1 to indicate more combinations are available
     return 1;
 }
+
+
 
 
 /**
@@ -72,16 +86,17 @@ Solution generate_brk_combinations(int nb_breakpoints, SFS sfs, Time_gride tg)
     // Flag for stopping the combination generation
     int arret = 1;
     // Calculate the initial solution with the given breakpoints
-    system_resolution(&sol, sfs, tg);
+    system_resolution(&sol, sfs, tg, 1);
     // Initialize a temporary solution to keep track of the best found solution
     Solution tmp_sol = copy_solution(sol);
     // Loop through all breakpoint combinations until `arret` is set to 0
     while (arret && nb_breakpoints > 0)
-    {
+    {   
         // Generate the next combination of breakpoints
         arret = recursive_bk_combination(sol.breakpoints, sol.nb_breakpoints, tg.grid_size);
+
         // Calculate the solution (log-likelihood and distance) for the new combination
-        system_resolution(&sol, sfs, tg);
+        system_resolution(&sol, sfs, tg, 1);
         // If the new solution has a higher log-likelihood and all theta values are positive, keep its
         if (isnan(tmp_sol.log_likelihood) || sol.log_likelihood > tmp_sol.log_likelihood)
         {
@@ -150,13 +165,13 @@ Solution refine_solution_b(Solution sol_initiale, int b, SFS sfs, Time_gride tg,
     Solution sol1 = copy_solution(sol_initiale);
     Solution solm = copy_solution(sol_initiale);
     sol1.breakpoints[b]  += sign;
-    system_resolution(&sol1, sfs, tg);
+    system_resolution(&sol1, sfs, tg, 1);
     
     while(sol1.log_likelihood > solm.log_likelihood){
         clear_solution(solm);
         solm = copy_solution(sol1);
         sol1.breakpoints[b]  += sign;
-        system_resolution(&sol1, sfs, tg);
+        system_resolution(&sol1, sfs, tg, 1);
     }
     clear_solution(sol1);
     // clear_solution(sol2);
@@ -285,7 +300,6 @@ Solution *find_scenario(SFS sfs, Time_gride tg, int epochs)
     {
         // Generate the best solution for the current number of breakpoints
         liste_solution[nb_breakpoints] = generate_brk_combinations(nb_breakpoints, sfs, tg);
-        printf("%f aa\n", liste_solution[nb_breakpoints].log_likelihood);
         if (nb_breakpoints >= 1)
         {
             refine_solution(&liste_solution[nb_breakpoints], sfs, tg);
@@ -340,10 +354,85 @@ Solution *find_scenario_f(SFS sfs, Time_gride tg, Flag flag)
         refine_solution_f(&liste_solution[0], sfs, tg, flag);
     }
     convert_times(&liste_solution[0], tg, sfs);
-    // printf("%d aa\n", nb_breakpoints);
 
     return liste_solution;
 }
+
+
+/**
+ * @brief Perform a cumulative log-likelihood ratio test between models with increasing epochs.
+ *
+ * @param solutions Array of Solution structures.
+ * @param k         Number of models.
+ * @param alpha     Significance level (for display only).
+ * @return          Best model index (1-based, corresponding to number of epochs).
+ */
+int logratio_cumulative_test(const Solution *solutions, int k, double alpha) {
+    int i = 0; // starting model (smallest number of epochs)
+
+    while (i < k - 1) {
+        int j = i + 1; // next model (more epochs)
+        int df = 2 * (j - i);  // degrees of freedom = 2 per extra epoch
+
+        // Make sure we don't go beyond our df list
+        if (df > DF_LIST[DF_COUNT - 1]) {
+            printf("Warning: df = %d exceeds predefined list (max = %d)\n", df, DF_LIST[DF_COUNT - 1]);
+            break;
+        }
+
+        // Find critical value corresponding to df
+        double crit = 0.0;
+        for (int d = 0; d < DF_COUNT; d++) {
+            if (DF_LIST[d] == df) {
+                crit = CHI2_CRIT[d];
+                break;
+            }
+        }
+
+        double stat = 2 * (solutions[j].log_likelihood - solutions[i].log_likelihood);
+
+        // printf("Test between %d and %d epochs: stat = %.4f, df = %d\n",
+        //        i + 1, j + 1, stat, df);
+
+        if (stat > crit) {
+            // printf("=> Model with %d epochs is significantly better than %d epochs (p < %.2f)\n\n",
+            //        j + 1, i + 1, alpha);
+            i = j; // accept more complex model
+        } else {
+            // Try cumulative test with one more jump
+            j++;
+            if (j >= k) break;
+
+            df = 2 * (j - i);
+            if (df > DF_LIST[DF_COUNT - 1]) break;
+
+            for (int d = 0; d < DF_COUNT; d++) {
+                if (DF_LIST[d] == df) {
+                    crit = CHI2_CRIT[d];
+                    break;
+                }
+            }
+
+            stat = 2 * (solutions[j].log_likelihood - solutions[i].log_likelihood);
+
+            // printf("Cumulative test between %d and %d epochs: stat = %.4f, df = %d\n",
+                //    i + 1, j + 1, stat, df);
+
+            if (stat > crit) {
+                // printf("=> Model with %d epochs is significantly better than %d epochs (p < %.2f)\n\n",
+                    //    j + 1, i + 1, alpha);
+                i = j;
+            } else {
+                // printf("=> No model with more epochs improves significantly.\n");
+                break;
+            }
+        }
+    }
+
+    printf("\nBest model selected: %d epochs\n", i + 1);
+    return i + 1;
+}
+
 
 
 // void copy_and_insert_in_sorted_array(int *breakpoints, int nb_breakpoint, int new_breakpoint, int *new_breakpoints)
