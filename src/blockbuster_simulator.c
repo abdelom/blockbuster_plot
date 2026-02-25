@@ -286,7 +286,8 @@ int main(int argc, char *argv[])
 
     start = clock(); // Début de la mesure du temps
     double *H = absolute_to_relative_times(args.parameters, args.n_parameters);
-    Time_gride tg = init_time_grid_H(args.n_samples, args.n_parameters / 2, H);
+    SFS sfs1; sfs1.n_haplotypes = args.n_samples; sfs1.sfs_length = args.n_samples - 1;
+    Time_gride tg = init_time_grid_H(sfs1, args.n_parameters / 2, H);
     double *sfs = sfs_infinite(args, tg.cumulative_bl);
     end = clock(); // Fin de la mesure du temps
     elapsed_time = ((double)(end - start)) / CLOCKS_PER_SEC; // Conversion en secondes

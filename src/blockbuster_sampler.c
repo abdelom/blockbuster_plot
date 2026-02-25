@@ -28,6 +28,37 @@ double *adapt_scale(double * time_scale, Solution sol, int repeats)
     return thetas;
 }
 
+
+static int cmp_double(const void *a, const void *b)
+{
+    double x = *(double *)a;
+    double y = *(double *)b;
+    if (x < y) return -1;
+    if (x > y) return 1;
+    return 0;
+}
+
+void compute_quantiles(
+    double *x,
+    int n,
+    double alpha,
+    double *q_low,
+    double *q_high
+)
+{
+    qsort(x, n, sizeof(double), cmp_double);
+
+    int i_low  = (int)((alpha / 2.0) * n);
+    int i_high = (int)((1.0 - alpha / 2.0) * n);
+
+    if (i_low < 0) i_low = 0;
+    if (i_high >= n) i_high = n - 1;
+
+    *q_low  = x[i_low];
+    *q_high = x[i_high];
+}
+
+
 // Fonction pour calculer la moyenne harmonique par ligne
 double *harmonic_mean_rows(double **matrix, int n_rows, int n_cols)
 {
@@ -254,10 +285,10 @@ Solution * bootstrap(SFS sfs, Time_gride tg, int epochs, int repeats)
         SFS sfs_boot = noise_sfs(sfs);
         // Solution *solution = find_scenario(sfs_boot, tg, epochs);
         sfs_boot.delta_time = 0.1;       // char *outfile_b = construct_output_filepath(out_file, "bootstrap_scenarios.txt");
-        list_solution[b] = generate_brk_combinations(epochs - 1, sfs_boot, tg);
+        list_solution[b] = generate_brk_combinations(epochs - 1, sfs_boot, tg, repeats);
         if (epochs - 1 >= 1)
         {
-            refine_solution(&list_solution[b], sfs_boot, tg);
+            refine_solution(&list_solution[b], sfs_boot, tg, repeats);
         }
         if((b + 1) % 50 == 0)
             printf("\n smoothing completion : %f % ", 100 * (float)(b + 1) / (float)repeats);

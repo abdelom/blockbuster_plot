@@ -1,0 +1,16 @@
+time_units: Ne generations
+generation_time: 1  
+demes:
+  - name: B
+    start_time: .inf
+    epochs:
+      - start_size: 289248.784202
+        end_time: 0.853422
+      - start_size: 289248.784202
+        end_time: 0.426711
+      - start_size: 988800.135166
+        end_time: 0.236854
+      - start_size: 3838831.222281
+        end_time: 0.017238
+      - start_size: 1818198.024988
+        end_time: 0.0

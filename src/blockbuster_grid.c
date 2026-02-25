@@ -272,19 +272,31 @@ double *element_time(int n_sample, double Hj)
  * @param sfs_length   Length of the SFS (number of frequency classes).
  * @param Hj           Time corresponding to the column (upper bound of interval).
  */
-void weigth_grid_i(double **weight_grid, double *wik, int col, int n_sample, int sfs_length, double Hj)
+void weigth_grid_i(double **weight_grid, double *wik, int col, SFS sfs, double Hj)
 {
-    double *vkj = element_time(n_sample, Hj);
+    double *vkj = element_time(sfs.n_haplotypes, Hj);
     if (!vkj)
         return;
 
-    for (int j = 0; j < sfs_length; j++)
+    for (int j = 0; j < sfs.n_haplotypes - 1; j++)
     {
         weight_grid[j][col] = 0.0;
-        for (int k = 0; k < n_sample - 1; k++)
-            weight_grid[j][col] += vkj[k] * wik[j * (n_sample - 1) + k];
+        for (int k = 0; k < sfs.n_haplotypes - 1; k++)
+            weight_grid[j][col] += vkj[k] * wik[j * (sfs.n_haplotypes - 1) + k];
     }
-
+    // if(!sfs.oriented)
+    // {
+    //     int b = sfs.n_haplotypes - sfs.sfs_length;
+    //     printf("b=%d\n", b);
+    //     if (sfs.troncation > 5)
+    //         b --;
+    //     for (int j = b; j < sfs.n_haplotypes - 1; j++)
+    //     {
+    //         weight_grid[j][col] = 0.0;
+    //         for (int k = 0; k < sfs.n_haplotypes - 1; k++)
+    //             weight_grid[j][col] += vkj[k] * wik[j * (sfs.n_haplotypes - 1) + k];
+    //     }
+    // }
     free(vkj);
 }
 
@@ -312,20 +324,20 @@ void weigth_grid_i(double **weight_grid, double *wik, int col, int n_sample, int
  *     // Use `weights` here
  *     free(weights);  // Free the allocated memory when done
  */
-void cumulatve_weight_v2(int n_sample, int sfs_length, int grid_size, Time_gride *tg)
+void cumulatve_weight_v2(SFS sfs, int grid_size, Time_gride *tg)
 {
     // Allouer la grille des poids (weight_grid) seulement si elle n'est pas déjà allouée
     if (tg->cumulative_bl == NULL) {
-        tg->cumulative_bl  = malloc(sfs_length * sizeof(double *)); // (n_sample - 1) lignes pour différents groupes de descendants
-        for (int i = 0; i < sfs_length; i++)
+        tg->cumulative_bl  = malloc((sfs.n_haplotypes - 1) * sizeof(double *)); // (n_sample - 1) lignes pour différents groupes de descendants
+        for (int i = 0; i < sfs.n_haplotypes - 1; i++)
             tg->cumulative_bl [i] = calloc(grid_size + 2, sizeof(double));
     }
     // Calculate the cumulative branch lengths for each descendant group in the grid
     for (int i = 1; i < grid_size + 1; i++)
-        weigth_grid_i(tg->cumulative_bl ,tg->wik, i, n_sample, sfs_length, tg->time_scale[i - 1]);
+        weigth_grid_i(tg->cumulative_bl ,tg->wik, i, sfs, tg->time_scale[i - 1]);
 
     // Finalize the cumulative branch lengths for the last time interval (infinity)
-    weigth_grid_i(tg->cumulative_bl , tg->wik, grid_size + 1, n_sample, sfs_length, INFINITY);
+    weigth_grid_i(tg->cumulative_bl , tg->wik, grid_size + 1, sfs, INFINITY);
 }
 
 
@@ -347,18 +359,18 @@ void fold_time_grid(Time_gride *tg, SFS sfs)
         int folded_size = (sfs.n_haplotypes - 1) / 2 + (sfs.n_haplotypes - 1) % 2;
         int unfolded_size = sfs.n_haplotypes - 1;
 
-        if (sfs.troncation > 5)
-            unfolded_size = (unfolded_size < sfs.troncation) ? unfolded_size : sfs.troncation; 
+        // if (sfs.troncation > 5)
+        //     unfolded_size = (unfolded_size < sfs.troncation) ? unfolded_size : sfs.troncation; 
 
         for (int i = folded_size; i < unfolded_size; i++)
         {
             for (int j = 0; j < tg->grid_size * 1000 + 3; j++)
             {
-                // Special handling for ignored singleton row
-                if (!sfs.singleton && i == sfs.n_haplotypes - 2)
-                    tg->cumulative_bl[sfs.n_haplotypes - 2 - i][j] = tg->cumulative_bl[i][j];
-                else
-                    tg->cumulative_bl[sfs.n_haplotypes - 2 - i][j] += tg->cumulative_bl[i][j];
+                // // Special handling for ignored singleton row
+                // if (!sfs.singleton && i == sfs.n_haplotypes - 2)
+                //     tg->cumulative_bl[sfs.n_haplotypes - 2 - i][j] = tg->cumulative_bl[i][j];
+                // else
+                tg->cumulative_bl[sfs.n_haplotypes - 2 - i][j] += tg->cumulative_bl[i][j];
             }
             free(tg->cumulative_bl[i]);  // Free mirrored row after folding
         }
@@ -377,10 +389,10 @@ void fold_time_grid(Time_gride *tg, SFS sfs)
  */
 void erased_singleton_grid(Time_gride *tg, SFS sfs)
 {
-    if (sfs.oriented && !sfs.singleton)
+    if (!sfs.singleton)
     {
         double *tmp = tg->cumulative_bl[0];
-        for (int i = 1; i < sfs.sfs_length; i++)
+        for (int i = 1; i <= sfs.sfs_length; i++)
         {
             tg->cumulative_bl[i - 1] = tg->cumulative_bl[i];
         }
@@ -427,11 +439,13 @@ Time_gride init_time_grid(SFS sfs, int grid_size, double ub, double lb)
 
     printf("%d\n", sfs_length);
         // See kimmel and polanski 2003
-    time_grid.wik = Wik(sfs.n_haplotypes, sfs_length); 
+    time_grid.wik = !sfs.oriented 
+    ? Wik(sfs.n_haplotypes, sfs.n_haplotypes - 1) 
+    : Wik(sfs.n_haplotypes, sfs_length);
+
     // Compute cumulative branch length matrix for all SFS bins and time points
     cumulatve_weight_v2(
-        sfs.n_haplotypes,
-        sfs_length,
+        sfs,
         grid_size * GRIDREFINE + 1,
         &time_grid
     );
@@ -457,14 +471,14 @@ Time_gride init_time_grid(SFS sfs, int grid_size, double ub, double lb)
  *
  * @return A Time_gride structure with initialized time scale and cumulative branch lengths.
  */
-Time_gride init_time_grid_H(int n_haplotypes, int grid_size, double *H)
+Time_gride init_time_grid_H(SFS sfs, int grid_size, double *H)
 {
     Time_gride time_grid;
     time_grid.grid_size = grid_size;
     time_grid.cumulative_bl = NULL;
     time_grid.time_scale = H;
-    time_grid.wik = Wik(n_haplotypes, n_haplotypes - 1);
-    cumulatve_weight_v2(n_haplotypes, n_haplotypes - 1, grid_size, &time_grid);
+    time_grid.wik = Wik(sfs.n_haplotypes, sfs.n_haplotypes - 1);
+    cumulatve_weight_v2(sfs, grid_size, &time_grid);
     return time_grid;
 }
 
@@ -489,7 +503,7 @@ Time_gride init_time_grid_H_wik(Time_gride tg, SFS sfs,  double *H)
     time_grid.cumulative_bl = NULL;
     time_grid.time_scale = H;
     time_grid.wik = tg.wik;
-    cumulatve_weight_v2(sfs.n_haplotypes, sfs.n_haplotypes - 1, 6, &time_grid);
+    cumulatve_weight_v2(sfs, 6, &time_grid);
     clear_time_grid(tg, sfs.n_haplotypes - 1);
         // Apply folding and singleton removal to the rows of cumulative_bl
     fold_time_grid(&time_grid, sfs);

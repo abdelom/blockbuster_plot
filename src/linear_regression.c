@@ -328,6 +328,7 @@ double regularization(Solution *sol, int r)
     double llikelihood = sol->log_likelihood;
     if(r)
     {
+        // printf("Regularization term: %d\n", r);
         for (int i = 1; i <= sol -> nb_breakpoints; i ++)
             llikelihood += - 1 * fabs(log10(sol->thetas[i] / sol->thetas[i-1]));
     }
@@ -359,7 +360,7 @@ void system_resolution(Solution *sol, SFS sfs, Time_gride tg, int r)
     // replace_negative_with_1(sol->thetas, system.n_col); // if thetas are negatives they are replaced by 1 as population sizes cannot be inferior to 0
     double *sfs_theo = SFS_theo(sol->thetas, system, sfs.sfs_length);
     sol->log_likelihood = log_likelihood(sfs, system, sol, sfs_theo, tg);
-    // sol->log_likelihood = regularization(sol, r);
+    sol->log_likelihood = regularization(sol, r);
     sol->distance = distance(sfs.training, sfs_theo, sfs.sfs_length);
     free(system.weight);
     free(sfs_theo);    // Free the memory allocated for the frequency SFS

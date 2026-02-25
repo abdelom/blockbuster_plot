@@ -116,7 +116,7 @@ echo
 # Exécution du programme C
 echo ">>>> Running C program: inference"
 START_TIME_C=$(date +%s)
-echo 
+echo  sfs_file: $SFS_FILE
 # Construction de la commande C
 C_CMD="./bin/blockbuster_main --sfs $SFS_FILE -p $OUTPUT_DIR -o $ORIENTED -b $NUM_BLOCKS  -u $UPPER_BOUND -l $LOWER_BOUND -e $EPOCHS -n $GRID_SIZE -S $SING -t $TRONC -m $MUTATION_RATE -L $GENOME_LENGTH -g $GENERATION_TIME -r $REP"
 

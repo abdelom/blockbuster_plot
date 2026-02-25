@@ -27,11 +27,11 @@ typedef struct Time_gride
 #define GRIDREFINE 1000
 
 Time_gride init_time_grid(SFS sfs, int grid_size, double ub, double  lb);
-Time_gride init_time_grid_H(int n_haplotypes, int grid_size, double *H);
+Time_gride init_time_grid_H(SFS sfs, int grid_size, double *H);
 Time_gride init_time_grid_H_wik(Time_gride tg, SFS sfs,  double *H);
 void save_cumulated_weight(int sfs_length, int grid_size, double **matrix, char *filename);
 void clear_time_grid(Time_gride tg, int sfs_length);
-void cumulatve_weight_v2(int n_sample, int sfs_length, int grid_size, Time_gride *tg);
+void cumulatve_weight_v2(SFS sfs, int grid_size, Time_gride *tg);
 double* generate_linear_scale(int grid_size, double upper_bound, double lower_bound);
 double* generate_logarithmic_scale(int grid_size, double upper_bound, double lower_bound);
 #endif // Fin de la condition PAST_GRID

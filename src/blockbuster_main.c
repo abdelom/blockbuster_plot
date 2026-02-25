@@ -482,7 +482,7 @@ int main(int argc, char *argv[])
         return 1; // Erreur dans le parsing
     char *outfile = construct_output_filepath(args.prefixe, "scenarios.txt");
     // Generate the time scale (either logarithmic or linear based on the `log` flag)
-    SFS sfs= int_sfs(args.sfs_file, args.oriented, args.troncation, args.singleton, args.num_blocks, args.delta_time);
+    SFS sfs = int_sfs(args.sfs_file, args.oriented, args.troncation, args.singleton, args.num_blocks, args.delta_time);
     if (args.lower_bound < 0)
         args.lower_bound = 1. / (10 * sfs.n_haplotypes);
     // if (args.recent > 0)
@@ -503,7 +503,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        list_solution = find_scenario(sfs, time_grid, args.epochs);
+        list_solution = find_scenario(sfs, time_grid, args.epochs, args.repeats);
         // clock_t start_time = clock(); // Start time measurement
         // metropolis_hastings(list_solution[6], sfs, time_grid, 5e5);
         // clock_t end_time = clock();                                                // End time measurement

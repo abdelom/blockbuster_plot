@@ -257,7 +257,7 @@ SFS int_sfs(char *sfs_file, int oriented, int troncation, int singleton, int num
     sfs.n_haplotypes = sfs.sfs_length + 1; // Sample size
 
     // Preprocessing steps
-    replace_with_0(&sfs);             // Replace ignored bins with 0
+    //              // Replace ignored bins with 0
     if (!oriented)
         fold_sfs(&sfs);               // Fold the SFS if unoriented
 
@@ -267,7 +267,7 @@ SFS int_sfs(char *sfs_file, int oriented, int troncation, int singleton, int num
         sfs.sfs_length = troncation;
         sfs.training = realloc(sfs.training, sfs.sfs_length * sizeof(double));
     }
-
+    replace_with_0(&sfs);
     // Remove singleton bin if requested
     if (!singleton)
         singleton_erased(&sfs);

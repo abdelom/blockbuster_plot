@@ -8,11 +8,11 @@
 #include "linear_regression_f.h"
 
 // Fonction pour trouver le scénario
-Solution *find_scenario(SFS sfs, Time_gride tg, int changes);
+Solution *find_scenario(SFS sfs, Time_gride tg, int changes, int r);
 // Solution generate_brk_combinations_f(int nb_breakpoints, SFS sfs, Time_gride tg, Flag f);
 Solution *find_scenario_f(SFS sfs, Time_gride tg, Flag flag);
-Solution generate_brk_combinations(int nb_breakpoints, SFS sfs, Time_gride tg);
-void refine_solution(Solution *sol_initiale, SFS sfs, Time_gride tg);
+Solution generate_brk_combinations(int nb_breakpoints, SFS sfs, Time_gride tg, int r);
+void refine_solution(Solution *sol_initiale, SFS sfs, Time_gride tg, int r);
 int logratio_cumulative_test(const Solution *solutions, int k, double alpha);
 void print_solution(Solution sol, Time_gride tg);
 

@@ -2,7 +2,7 @@
 SRC_DIR = src
 OBJ_DIR = obj
 BIN_DIR = bin
-
+LAPACKE_DIR = lapack-3.10.1/build/lib
 # Noms des exécutables
 TARGET1 = $(BIN_DIR)/blockbuster_grid_main
 TARGET2 = $(BIN_DIR)/blockbuster_main
@@ -22,8 +22,11 @@ OBJS3 = $(OBJ_DIR)/blockbuster_simulator.o $(OBJ_DIR)/blockbuster_grid.o $(OBJ_D
 
 # Compilateur et options
 CC = gcc
-CFLAGS = -g -fopenmp
-LIBS = -lm -llapacke -lopenblas
+# Options de compilation
+CFLAGS = -g -fopenmp -I$(LAPACKE_DIR)/../include
+
+# Bibliothèques à lier
+LIBS = -L$(LAPACKE_DIR) -lm -lmpfr -llapacke -lopenblas
 
 # Règle par défaut
 all: $(TARGET1) $(TARGET2) $(TARGET3)

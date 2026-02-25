@@ -264,6 +264,7 @@ def plot_demographic_scenarios4(scenarios, output_directory, best, o = 0, g = -1
             # species = stdpopsim.get_species("HomSap")
             # model = species.get_demographic_model("Zigzag_1S14")
             # graph = model.model.to_demes()
+            # graph = demes.load("../hossamdebugging/for_abdel/SP.yml")
             # demesdraw.size_history(graph, ax=ax1,  log_size=True)
         ax1.set_xscale("log")
         if len(times) > 0:
