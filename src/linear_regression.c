@@ -322,15 +322,45 @@ void residues(Solution *sol, Time_gride tg, SFS sfs)
 }
 
 
-double regularization(Solution *sol, int r)
+double regularization_log(Solution *sol, int r)
 {
 
     double llikelihood = sol->log_likelihood;
-    if(r)
+    if(r == 1)
     {
         // printf("Regularization term: %d\n", r);
         for (int i = 1; i <= sol -> nb_breakpoints; i ++)
             llikelihood += - 1 * fabs(log10(sol->thetas[i] / sol->thetas[i-1]));
+    }
+    return llikelihood;
+}
+
+
+double regularization_ratio(Solution *sol, int r)
+{
+    double llikelihood = sol->log_likelihood;
+
+    if (r == 2)
+    {
+        // Terme de prior : somme des logs pour theta2 à theta_{m-1}
+        for (int i = 1; i < sol->nb_breakpoints; i++)  // i=1 corresponds to theta_2
+        {
+            if (sol->thetas[i] <= 1e2)
+                // barrière numérique pour éviter log(0)
+                llikelihood += -1e6;
+            else
+                llikelihood += log(sol->thetas[i]);
+        }
+
+        // Terme de lissage : somme des ratios theta_i / theta_{i-1} pour i=2..m
+        for (int i = 1; i <= sol->nb_breakpoints; i++)  // i=1 corresponds to theta_2
+        {
+            if (sol->thetas[i-1] <= 1e2)
+                // éviter division par zéro
+                llikelihood += -1e6;
+            else
+                llikelihood += -sol->thetas[i] / sol->thetas[i-1];
+        }
     }
     return llikelihood;
 }
@@ -360,7 +390,8 @@ void system_resolution(Solution *sol, SFS sfs, Time_gride tg, int r)
     // replace_negative_with_1(sol->thetas, system.n_col); // if thetas are negatives they are replaced by 1 as population sizes cannot be inferior to 0
     double *sfs_theo = SFS_theo(sol->thetas, system, sfs.sfs_length);
     sol->log_likelihood = log_likelihood(sfs, system, sol, sfs_theo, tg);
-    sol->log_likelihood = regularization(sol, r);
+    sol->log_likelihood = regularization_log(sol, r);
+    sol->log_likelihood = regularization_ratio(sol, r);
     sol->distance = distance(sfs.training, sfs_theo, sfs.sfs_length);
     free(system.weight);
     free(sfs_theo);    // Free the memory allocated for the frequency SFS
