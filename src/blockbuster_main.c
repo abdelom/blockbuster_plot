@@ -1,3 +1,23 @@
+/*
+        Copyright (C) 2026 A Omarjee
+
+        This program is free software; you can redistribute it and/or
+        modify it under the terms of the GNU Lesser General Public License
+        as published by the Free Software Foundation; either version 2.1
+        of the License, or (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU Lesser General Public License for more details.
+
+        You should have received a copy of the GNU Lesser General Public License
+        along with this program; if not, write to the Free Software
+        Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+        for more information, please contact Abdelmajid Omarjee <abdelmajid.omarjee@mnhn.fr>
+*/
+
+
 #include "blockbuster_grid.h"
 #include "blockbuster.h"
 #include "sfs.h"
@@ -147,7 +167,7 @@ int parse_args(int argc, char *argv[], Args *args)
     args->upper_bound = 1.0;
     args->lower_bound = 1e-4;
     args->epochs = 5;
-    args->repeats = 0;
+    args->repeats = 1;
     args->grid_size = 35;
     args->singleton = 1;
     args->troncation = 0;
