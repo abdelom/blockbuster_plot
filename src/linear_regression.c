@@ -1,3 +1,23 @@
+/*
+        Copyright (C) 2026 A Omarjee
+
+        This program is free software; you can redistribute it and/or
+        modify it under the terms of the GNU Lesser General Public License
+        as published by the Free Software Foundation; either version 2.1
+        of the License, or (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU Lesser General Public License for more details.
+
+        You should have received a copy of the GNU Lesser General Public License
+        along with this program; if not, write to the Free Software
+        Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+        for more information, please contact Abdelmajid Omarjee <abdelmajid.omarjee@mnhn.fr>
+*/
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -326,7 +346,7 @@ double regularization_log(Solution *sol, int r)
 {
 
     double llikelihood = sol->log_likelihood;
-    if(r == 1)
+    if(r)
     {
         // printf("Regularization term: %d\n", r);
         for (int i = 1; i <= sol -> nb_breakpoints; i ++)
@@ -336,34 +356,34 @@ double regularization_log(Solution *sol, int r)
 }
 
 
-double regularization_ratio(Solution *sol, int r)
-{
-    double llikelihood = sol->log_likelihood;
+// double regularization_ratio(Solution *sol, int r)
+// {
+//     double llikelihood = sol->log_likelihood;
 
-    if (r == 2)
-    {
-        // Terme de prior : somme des logs pour theta2 à theta_{m-1}
-        for (int i = 1; i < sol->nb_breakpoints; i++)  // i=1 corresponds to theta_2
-        {
-            if (sol->thetas[i] <= 1e2)
-                // barrière numérique pour éviter log(0)
-                llikelihood += -1e6;
-            else
-                llikelihood += log(sol->thetas[i]);
-        }
+//     if (r == 2)
+//     {
+//         // Terme de prior : somme des logs pour theta2 à theta_{m-1}
+//         for (int i = 1; i < sol->nb_breakpoints; i++)  // i=1 corresponds to theta_2
+//         {
+//             if (sol->thetas[i] <= 1e2)
+//                 // barrière numérique pour éviter log(0)
+//                 llikelihood += -1e6;
+//             else
+//                 llikelihood += log(sol->thetas[i]);
+//         }
 
-        // Terme de lissage : somme des ratios theta_i / theta_{i-1} pour i=2..m
-        for (int i = 1; i <= sol->nb_breakpoints; i++)  // i=1 corresponds to theta_2
-        {
-            if (sol->thetas[i-1] <= 1e2)
-                // éviter division par zéro
-                llikelihood += -1e6;
-            else
-                llikelihood += -sol->thetas[i] / sol->thetas[i-1];
-        }
-    }
-    return llikelihood;
-}
+//         // Terme de lissage : somme des ratios theta_i / theta_{i-1} pour i=2..m
+//         for (int i = 1; i <= sol->nb_breakpoints; i++)  // i=1 corresponds to theta_2
+//         {
+//             if (sol->thetas[i-1] <= 1e2)
+//                 // éviter division par zéro
+//                 llikelihood += -1e6;
+//             else
+//                 llikelihood += -sol->thetas[i] / sol->thetas[i-1];
+//         }
+//     }
+//     return llikelihood;
+// }
 
 /**
  * Resolves the system of equations to estimate population mutation rates (thetas) and calculates log likelihood and distance from observed sfs given fixed times of change.
@@ -391,7 +411,7 @@ void system_resolution(Solution *sol, SFS sfs, Time_gride tg, int r)
     double *sfs_theo = SFS_theo(sol->thetas, system, sfs.sfs_length);
     sol->log_likelihood = log_likelihood(sfs, system, sol, sfs_theo, tg);
     sol->log_likelihood = regularization_log(sol, r);
-    sol->log_likelihood = regularization_ratio(sol, r);
+    // sol->log_likelihood = regularization_ratio(sol, r);
     sol->distance = distance(sfs.training, sfs_theo, sfs.sfs_length);
     free(system.weight);
     free(sfs_theo);    // Free the memory allocated for the frequency SFS
