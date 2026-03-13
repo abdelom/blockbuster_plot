@@ -310,7 +310,7 @@ Solution * bootstrap(SFS sfs, Time_gride tg, int epochs, int repeats)
             refine_solution(&list_solution[b], sfs_boot, tg, repeats);
         }
         if((b + 1) % 50 == 0)
-            printf("\n smoothing completion : %f % ", 100 * (float)(b + 1) / (float)repeats);
+            printf("\n smoothing completion : %f ", 100 * (float)(b + 1) / (float)repeats);
         convert_times(&list_solution[b], tg, sfs_boot);
         // save_list_solution(list_solution, sfs_boot, outfile_b, epochs, tg);
         clear_sfs(sfs_boot);
